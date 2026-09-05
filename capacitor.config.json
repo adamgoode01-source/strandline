@@ -1,0 +1,9 @@
+{
+  "appId": "com.jcconcrete.strandline",
+  "appName": "Strandline",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#121212"
+  }
+}

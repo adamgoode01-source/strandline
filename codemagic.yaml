@@ -1,0 +1,89 @@
+# Codemagic CI/CD - builds Strandline for iOS on a macOS machine and ships to TestFlight.
+#
+# Before the first run, set these up in the Codemagic UI (they cannot live in this file):
+#   1. Team settings > Integrations > Apple Developer Portal  -> connect your App Store
+#      Connect API key (Issuer ID, Key ID, .p8). Name the integration and put that name
+#      in APP_STORE_CONNECT_ISSUER below via the `app_store_connect` group, or use
+#      `auth: integration` as configured here.
+#   2. App settings > Environment variables > group "appstore" (mark it secure).
+#
+# Docs: https://docs.codemagic.io/yaml-quick-start/building-a-native-ios-app/
+
+workflows:
+  ios-testflight:
+    name: Strandline iOS - TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+
+    integrations:
+      # Name of the Apple Developer Portal integration created in Codemagic team settings.
+      app_store_connect: JC Concrete App Store Connect
+
+    environment:
+      groups:
+        - appstore
+      vars:
+        BUNDLE_ID: "com.jcconcrete.strandline"
+        XCODE_PROJECT: "ios/App/App.xcodeproj"
+        XCODE_SCHEME: "App"
+      node: 24
+      xcode: latest
+
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.jcconcrete.strandline
+
+    cache:
+      cache_paths:
+        - ~/.npm
+
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci
+
+      - name: Sync web assets into the iOS project
+        script: npx cap sync ios
+
+      - name: Set the build number
+        script: |
+          cd "$CM_BUILD_DIR/ios/App"
+          # Codemagic's per-project counter guarantees a build number App Store
+          # Connect has not seen before, which it rejects duplicates of.
+          agvtool new-version -all "$(($BUILD_NUMBER + 1))"
+
+      - name: Fetch signing certificates and profiles
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Build the ipa
+        script: |
+          xcode-project build-ipa \
+            --project "$CM_BUILD_DIR/$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME" \
+            --config Release
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # Internal testers get the build with no Beta App Review. Add the group
+        # names you create in App Store Connect; remove this block to upload only.
+        beta_groups:
+          - JC Concrete Field
+        submit_to_app_store: false
+
+      email:
+        recipients:
+          - adamgoode01@gmail.com
+        notify:
+          success: true
+          failure: true

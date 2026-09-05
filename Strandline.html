@@ -1,0 +1,2744 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Strandline">
+<meta name="description" content="Tendon elongation and lift-off records for post-tensioned slabs. JC Concrete, LLC.">
+<title>Strandline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Archivo+Narrow:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  --ink:#16181B;
+  --ink-2:#43474C;
+  --ink-3:#6E7379;
+  --ground:#E6E7E3;
+  --surface:#FFFFFF;
+  --surface-2:#F1F2EE;
+  --surface-3:#DCDED8;
+  --rule:#C3C6BE;
+  --rule-hard:#9DA199;
+  --accent:#F2C511;
+  --accent-ink:#1A1600;
+  --accent-dim:#8A7100;
+  --ok:#2E6F52;
+  --ok-bg:#DFEDE5;
+  --warn:#A9561F;
+  --warn-bg:#F6E6D8;
+  --bad:#A3322C;
+  --bad-bg:#F6DEDB;
+  --field-bg:#FFFBE8;
+
+  --f-display:'Archivo','Helvetica Neue',Arial,sans-serif;
+  --f-cond:'Archivo Narrow','Arial Narrow',Arial,sans-serif;
+  --f-body:'Public Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+
+  --sp:4px;
+  --r:3px;
+  --shadow:0 1px 0 rgba(22,24,27,.06), 0 6px 20px -12px rgba(22,24,27,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#E8E9E4;
+    --ink-2:#B4B7B0;
+    --ink-3:#8A8E87;
+    --ground:#131416;
+    --surface:#1C1E20;
+    --surface-2:#232629;
+    --surface-3:#2C3033;
+    --rule:#383C40;
+    --rule-hard:#4E545A;
+    --accent:#F2C511;
+    --accent-ink:#1A1600;
+    --accent-dim:#D9B41A;
+    --ok:#6FC79B;
+    --ok-bg:#1B3129;
+    --warn:#E0955B;
+    --warn-bg:#33241A;
+    --bad:#E88079;
+    --bad-bg:#361F1D;
+    --field-bg:#2A2718;
+    --shadow:0 1px 0 rgba(0,0,0,.4), 0 8px 24px -14px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#E8E9E4;
+  --ink-2:#B4B7B0;
+  --ink-3:#8A8E87;
+  --ground:#131416;
+  --surface:#1C1E20;
+  --surface-2:#232629;
+  --surface-3:#2C3033;
+  --rule:#383C40;
+  --rule-hard:#4E545A;
+  --accent:#F2C511;
+  --accent-ink:#1A1600;
+  --accent-dim:#D9B41A;
+  --ok:#6FC79B;
+  --ok-bg:#1B3129;
+  --warn:#E0955B;
+  --warn-bg:#33241A;
+  --bad:#E88079;
+  --bad-bg:#361F1D;
+  --field-bg:#2A2718;
+  --shadow:0 1px 0 rgba(0,0,0,.4), 0 8px 24px -14px rgba(0,0,0,.8);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:var(--f-body);
+  font-size:15px;
+  line-height:1.5;
+  -webkit-text-size-adjust:100%;
+}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+.eyebrow{
+  font-family:var(--f-cond);
+  text-transform:uppercase;
+  letter-spacing:.14em;
+  font-size:11px;
+  font-weight:700;
+  color:var(--ink-3);
+}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+/* ---------- shell ---------- */
+.shell{max-width:1500px;margin:0 auto;padding:0 0 96px}
+
+/* hazard stripe */
+.hazard{
+  height:10px;
+  background:repeating-linear-gradient(135deg,var(--accent) 0 14px,#16181B 14px 28px);
+}
+.safety{
+  display:flex;gap:10px;align-items:flex-start;
+  background:var(--accent);color:var(--accent-ink);
+  padding:9px 16px;
+  font-family:var(--f-cond);
+  font-weight:700;
+  font-size:12.5px;
+  letter-spacing:.03em;
+  text-transform:uppercase;
+  line-height:1.35;
+}
+.safety span:first-child{font-size:15px;line-height:1.1}
+
+/* titleblock */
+.titleblock{
+  background:var(--surface);
+  border-bottom:2px solid var(--ink);
+}
+.tb-top{
+  display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between;
+  padding:16px 16px 12px;
+}
+.brandwrap{display:flex;align-items:center;gap:12px}
+.brandmark{
+  width:34px;height:34px;flex:none;
+  border:2px solid var(--ink);
+  display:grid;place-items:center;
+  background:var(--accent);
+  color:var(--accent-ink);
+  font-family:var(--f-display);font-weight:800;font-size:16px;
+}
+.brandmark span{transform:translateY(-.5px)}
+h1{font-size:23px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.brandwrap p{margin:3px 0 0;font-size:12px;color:var(--ink-3);font-family:var(--f-cond);text-transform:uppercase;letter-spacing:.1em;font-weight:600}
+
+.projbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tb-cells{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+  border-top:1px solid var(--rule-hard);
+}
+.tb-cell{
+  padding:7px 12px 8px;
+  border-right:1px solid var(--rule);
+  min-width:0;
+}
+.tb-cell:last-child{border-right:0}
+.tb-cell .k{
+  display:block;font-family:var(--f-cond);text-transform:uppercase;
+  letter-spacing:.11em;font-size:9.5px;font-weight:700;color:var(--ink-3);
+}
+.tb-cell .v{
+  display:block;font-family:var(--f-mono);font-size:13px;font-weight:500;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.tb-cell .v.empty{color:var(--ink-3);font-weight:400}
+
+/* nav rail */
+nav.rail{
+  position:sticky;top:0;z-index:40;
+  background:var(--surface-2);
+  border-bottom:1px solid var(--rule-hard);
+  display:flex;gap:0;overflow-x:auto;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+}
+nav.rail::-webkit-scrollbar{display:none}
+nav.rail button{
+  appearance:none;background:none;border:0;
+  border-bottom:3px solid transparent;
+  padding:12px 16px 10px;
+  font-family:var(--f-cond);font-weight:700;font-size:13px;
+  text-transform:uppercase;letter-spacing:.09em;
+  color:var(--ink-3);cursor:pointer;white-space:nowrap;
+  display:flex;align-items:baseline;gap:7px;
+  min-height:46px;
+}
+nav.rail button .n{
+  font-family:var(--f-mono);font-size:10px;font-weight:600;
+  color:var(--ink-3);
+}
+nav.rail button:hover{color:var(--ink);background:var(--surface-3)}
+nav.rail button[aria-current="true"]{
+  color:var(--ink);border-bottom-color:var(--accent);background:var(--surface);
+}
+nav.rail button[aria-current="true"] .n{color:var(--accent-dim)}
+
+/* panels */
+main{padding:20px 16px 0}
+.panel{display:none}
+.panel.on{display:block}
+.panel > header{margin-bottom:16px;max-width:70ch}
+.panel > header h2{font-size:19px;font-weight:700;margin-bottom:3px}
+.panel > header p{margin:0;color:var(--ink-2);font-size:14px}
+
+.card{
+  background:var(--surface);
+  border:1px solid var(--rule);
+  border-radius:var(--r);
+  box-shadow:var(--shadow);
+  margin-bottom:16px;
+}
+.card > h3{
+  font-family:var(--f-cond);text-transform:uppercase;letter-spacing:.1em;
+  font-size:12px;font-weight:700;color:var(--ink-2);
+  padding:10px 14px;border-bottom:1px solid var(--rule);
+  background:var(--surface-2);
+  border-radius:var(--r) var(--r) 0 0;
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+}
+.card .body{padding:14px}
+
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+
+label.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+label.f > span{
+  font-family:var(--f-cond);text-transform:uppercase;letter-spacing:.1em;
+  font-size:10px;font-weight:700;color:var(--ink-3);
+}
+label.f > em{font-style:normal;font-size:11.5px;color:var(--ink-3);line-height:1.35}
+input,select,textarea{
+  font-family:var(--f-mono);font-size:16px;
+  padding:9px 10px;
+  background:var(--surface);color:var(--ink);
+  border:1px solid var(--rule-hard);border-radius:var(--r);
+  width:100%;min-width:0;
+  font-variant-numeric:tabular-nums;
+}
+textarea{font-size:13px;line-height:1.45;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,[tabindex]:focus-visible{
+  outline:2px solid var(--accent-dim);outline-offset:1px;
+}
+input[readonly]{background:var(--surface-2);color:var(--ink-2)}
+select{cursor:pointer}
+
+.btn{
+  appearance:none;cursor:pointer;
+  font-family:var(--f-cond);font-weight:700;font-size:13px;
+  text-transform:uppercase;letter-spacing:.08em;
+  padding:10px 14px;min-height:42px;
+  border:1px solid var(--ink);border-radius:var(--r);
+  background:var(--surface);color:var(--ink);
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+}
+.btn:hover{background:var(--surface-3)}
+.btn.primary{background:var(--accent);border-color:var(--ink);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.ghost{border-color:var(--rule-hard);color:var(--ink-2)}
+.btn.ghost:hover{color:var(--ink)}
+.btn.sm{padding:6px 10px;min-height:32px;font-size:11.5px}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+.btn.danger:hover{background:var(--bad-bg)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px}
+
+/* callouts */
+.note{
+  border-left:3px solid var(--rule-hard);
+  background:var(--surface-2);
+  padding:10px 12px;font-size:13px;color:var(--ink-2);
+  border-radius:0 var(--r) var(--r) 0;
+}
+.note strong{color:var(--ink)}
+.note.rfi{border-left-color:var(--warn);background:var(--warn-bg);color:var(--ink)}
+.note.stop{border-left-color:var(--bad);background:var(--bad-bg);color:var(--ink)}
+.note.ok{border-left-color:var(--ok);background:var(--ok-bg);color:var(--ink)}
+.note + .note{margin-top:8px}
+.note ul{margin:6px 0 0;padding-left:18px}
+.note li{margin:2px 0}
+
+/* stats */
+.stats{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(122px,1fr));
+  border:1px solid var(--rule);border-radius:var(--r);
+  background:var(--surface);overflow:hidden;margin-bottom:14px;
+  box-shadow:var(--shadow);
+}
+.stat{padding:11px 13px;border-right:1px solid var(--rule);position:relative}
+.stat:last-child{border-right:0}
+.stat .k{
+  font-family:var(--f-cond);text-transform:uppercase;letter-spacing:.11em;
+  font-size:9.5px;font-weight:700;color:var(--ink-3);display:block;
+}
+.stat .v{font-family:var(--f-mono);font-size:21px;font-weight:600;line-height:1.15;display:block;margin-top:2px}
+.stat .u{font-size:11px;color:var(--ink-3);font-weight:400}
+.stat.flag{background:var(--bad-bg)}
+.stat.flag .v{color:var(--bad)}
+.stat.good{background:var(--ok-bg)}
+.stat.good .v{color:var(--ok)}
+
+/* pills */
+.pill{
+  display:inline-flex;align-items:center;gap:5px;
+  font-family:var(--f-cond);font-weight:700;font-size:10.5px;
+  text-transform:uppercase;letter-spacing:.07em;
+  padding:3px 7px;border-radius:2px;white-space:nowrap;
+}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.pill.warn{background:var(--warn-bg);color:var(--warn)}
+.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill.idle{background:var(--surface-3);color:var(--ink-3)}
+
+/* tendon table */
+.tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:var(--r);background:var(--surface);box-shadow:var(--shadow)}
+table.tt{border-collapse:separate;border-spacing:0;width:100%;min-width:1300px}
+table.tt th{
+  font-family:var(--f-cond);text-transform:uppercase;letter-spacing:.06em;
+  font-size:9.5px;font-weight:700;color:var(--ink-2);
+  padding:6px 5px;text-align:left;vertical-align:bottom;
+  background:var(--surface-2);
+  border-bottom:2px solid var(--rule-hard);
+  border-right:1px solid var(--rule);
+  position:sticky;top:0;z-index:5;
+  line-height:1.15;
+}
+table.tt th .sub{display:block;color:var(--ink-3);font-weight:600;font-size:8.5px;letter-spacing:.04em}
+table.tt thead tr.grp th{
+  text-align:center;font-size:9px;letter-spacing:.14em;
+  border-bottom:1px solid var(--rule);padding:4px;top:0;
+  background:var(--surface-3);
+}
+table.tt thead tr.hdr th{top:22px}
+table.tt td{
+  padding:2px 3px;border-bottom:1px solid var(--rule);border-right:1px solid var(--rule);
+  vertical-align:middle;
+}
+table.tt td.calc{
+  font-family:var(--f-mono);font-size:12.5px;text-align:right;padding-right:7px;
+  background:var(--surface-2);font-variant-numeric:tabular-nums;
+}
+table.tt td.stat-c{text-align:center;padding:3px}
+table.tt input,table.tt select{padding:5px 6px;font-size:15px;border-radius:2px;border-color:var(--rule)}
+input.entry{background:var(--field-bg);border-color:var(--rule-hard)}
+input.bad{border-color:var(--bad);background:var(--bad-bg);color:var(--bad)}
+input.bad:focus-visible{outline-color:var(--bad)}
+table.tt tbody tr:nth-child(even) td{background-color:color-mix(in srgb,var(--surface-2) 45%,var(--surface))}
+table.tt tbody tr:nth-child(even) td.calc{background-color:var(--surface-2)}
+table.tt td.rownum{
+  font-family:var(--f-mono);font-size:11px;color:var(--ink-3);text-align:center;
+  background:var(--surface-2);width:30px;
+}
+table.tt td.act{width:34px;text-align:center}
+.xbtn{
+  appearance:none;background:none;border:1px solid var(--rule);border-radius:2px;
+  color:var(--ink-3);cursor:pointer;width:24px;height:24px;font-size:14px;line-height:1;
+  font-family:var(--f-mono);
+}
+.xbtn:hover{border-color:var(--bad);color:var(--bad);background:var(--bad-bg)}
+.grpband{display:block;font-size:8.5px}
+.calccell{display:flex;align-items:center;gap:3px}
+.estchip{
+  flex:none;font-family:var(--f-mono);font-size:9px;font-weight:600;
+  background:var(--warn-bg);color:var(--warn);
+  border-radius:2px;padding:2px 3px;line-height:1;cursor:help;
+}
+
+/* mobile tendon cards */
+.tcards{display:flex;flex-direction:column;gap:12px}
+.tcard{
+  border:1px solid var(--rule);border-radius:var(--r);background:var(--surface);
+  box-shadow:var(--shadow);overflow:hidden;
+}
+.tcard > .top{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:9px 11px;background:var(--surface-2);border-bottom:1px solid var(--rule);
+}
+.tcard > .top .idx{font-family:var(--f-mono);font-size:11px;color:var(--ink-3)}
+.tcard > .top .mk{font-family:var(--f-display);font-weight:700;font-size:17px}
+.tcard > .top .sp{flex:1}
+.tcard .sect{
+  padding:11px;border-bottom:1px dashed var(--rule);
+}
+.tcard .sect:last-child{border-bottom:0}
+.tcard .sect > .lbl{
+  font-family:var(--f-cond);text-transform:uppercase;letter-spacing:.11em;
+  font-size:9.5px;font-weight:700;color:var(--ink-3);margin-bottom:8px;display:block;
+}
+.readout{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule);border-radius:2px;overflow:hidden;
+}
+.readout > div{background:var(--surface-2);padding:6px 8px}
+.readout .k{display:block;font-family:var(--f-cond);text-transform:uppercase;letter-spacing:.09em;font-size:9px;font-weight:700;color:var(--ink-3)}
+.readout .v{display:block;font-family:var(--f-mono);font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px;max-height:190px;overflow:auto;padding:2px}
+.chip{
+  display:inline-flex;align-items:center;gap:5px;
+  border:1px solid var(--rule-hard);border-radius:2px;
+  padding:4px 7px;font-family:var(--f-mono);font-size:12px;cursor:pointer;
+  background:var(--surface);
+}
+.chip input{width:auto;min-width:0;margin:0}
+.chip:hover{background:var(--surface-3)}
+
+.drop{
+  border:2px dashed var(--rule-hard);border-radius:var(--r);
+  padding:26px 16px;text-align:center;background:var(--surface-2);cursor:pointer;
+}
+.drop.hot{border-color:var(--accent-dim);background:var(--field-bg)}
+.drop .big{font-family:var(--f-display);font-weight:700;font-size:15px}
+.drop .sm{font-size:12.5px;color:var(--ink-3);margin-top:3px}
+
+pre.txtdump{
+  margin:0;max-height:280px;overflow:auto;
+  font-family:var(--f-mono);font-size:11.5px;line-height:1.5;
+  background:var(--surface-2);border:1px solid var(--rule);border-radius:var(--r);
+  padding:10px;white-space:pre-wrap;word-break:break-word;color:var(--ink-2);
+}
+
+table.simple{border-collapse:collapse;width:100%;font-size:13px}
+table.simple th{
+  font-family:var(--f-cond);text-transform:uppercase;letter-spacing:.09em;font-size:10px;
+  color:var(--ink-3);text-align:left;padding:6px 8px;border-bottom:1px solid var(--rule-hard);
+}
+table.simple td{padding:6px 8px;border-bottom:1px solid var(--rule);font-family:var(--f-mono);font-size:12.5px}
+table.simple td.t{font-family:var(--f-body);font-size:13px}
+
+/* toast */
+#toast{
+  position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(140%);
+  background:var(--ink);color:var(--ground);
+  padding:11px 18px;border-radius:var(--r);
+  font-family:var(--f-cond);font-weight:700;font-size:13px;letter-spacing:.05em;text-transform:uppercase;
+  z-index:200;max-width:calc(100vw - 32px);text-align:center;
+  transition:transform .22s ease;box-shadow:0 12px 30px -10px rgba(0,0,0,.5);
+}
+#toast.on{transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion: reduce){#toast{transition:none}}
+
+.footnote{font-size:12px;color:var(--ink-3);line-height:1.5;max-width:80ch}
+.footnote code{font-family:var(--f-mono);font-size:11.5px}
+hr.r{border:0;border-top:1px solid var(--rule);margin:14px 0}
+
+.rowlead{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.rowlead .sp{flex:1}
+
+@media (max-width:900px){
+  .tb-top{padding:13px 13px 10px}
+  main{padding:16px 13px 0}
+  h1{font-size:20px}
+  .stat .v{font-size:19px}
+}
+</style>
+</head>
+<body>
+
+
+<div class="shell">
+  <div class="hazard"></div>
+  <div class="safety">
+    <span aria-hidden="true">&#9888;</span>
+    <span>Stressing safety &mdash; clear the live end. No personnel behind or in line with the jack. Enforce the exclusion zone at both ends and keep the safety cage in place until the ram is released.</span>
+  </div>
+
+  <div class="titleblock">
+    <div class="tb-top">
+      <div class="brandwrap">
+        <div class="brandmark" aria-hidden="true"><span>S</span></div>
+        <div>
+          <h1>Strandline</h1>
+          <p>Tendon elongation &amp; lift-off records &middot; JC Concrete, LLC</p>
+        </div>
+      </div>
+      <div class="projbar">
+        <label class="f" style="min-width:190px">
+          <span>Active record</span>
+          <select id="projSel"></select>
+        </label>
+        <button class="btn sm ghost" id="projNew">New</button>
+        <button class="btn sm ghost" id="projDup">Duplicate</button>
+        <button class="btn sm danger" id="projDel">Delete</button>
+      </div>
+    </div>
+    <div class="tb-cells" id="tbCells"></div>
+  </div>
+
+  <nav class="rail" id="rail" role="tablist" aria-label="Workflow">
+    <button role="tab" data-p="setup"><span class="n">01</span>Setup</button>
+    <button role="tab" data-p="plans"><span class="n">02</span>PT Plans</button>
+    <button role="tab" data-p="tendons"><span class="n">03</span>Tendons</button>
+    <button role="tab" data-p="review"><span class="n">04</span>Review</button>
+    <button role="tab" data-p="export"><span class="n">05</span>Export</button>
+  </nav>
+
+  <main>
+    <!-- ================= SETUP ================= -->
+    <section class="panel" id="p-setup" role="tabpanel">
+      <header>
+        <h2>Titleblock &amp; stressing data</h2>
+        <p>Everything on this page prints into the sheet header and drives the calculated columns. Enter it once per building or pour.</p>
+      </header>
+
+      <div class="card">
+        <h3>Project</h3>
+        <div class="body">
+          <div class="grid g2">
+            <label class="f"><span>Record name (internal)</span><input data-s="recName" placeholder="Bldg 3 &ndash; Level 1 SOG"></label>
+            <label class="f"><span>Job name</span><input data-s="job" placeholder="Alcove at Pinebrook"></label>
+            <label class="f"><span>Job number</span><input data-s="jobNo" placeholder="24-118"></label>
+            <label class="f"><span>General contractor</span><input data-s="gc"></label>
+            <label class="f"><span>Building</span><input data-s="bldg" placeholder="Bldg 3"></label>
+            <label class="f"><span>Slab / pour</span><input data-s="pour" placeholder="Pour 2 of 4"></label>
+            <label class="f"><span>Level / elevation</span><input data-s="level" placeholder="Level 1 SOG"></label>
+            <label class="f"><span>PT supplier</span><input data-s="ptSupplier"></label>
+            <label class="f"><span>PT shop drawing no. / rev &amp; date</span><input data-s="shopDwg" placeholder="PT-3.1 Rev 2, 05/14/26"></label>
+            <label class="f"><span>Engineer of record</span><input data-s="eor"></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Strand &amp; jacking</h3>
+        <div class="body">
+          <div class="grid g4">
+            <label class="f"><span>Strand diameter</span>
+              <select data-s="dia">
+                <option value="0.5">0.500 in</option>
+                <option value="0.6">0.600 in</option>
+                <option value="custom">Custom</option>
+              </select>
+            </label>
+            <label class="f"><span>A<sub>ps</sub> per strand (in&sup2;)</span><input data-s="aps" inputmode="decimal"></label>
+            <label class="f"><span>f<sub>pu</sub> (ksi)</span><input data-s="fpu" inputmode="decimal"></label>
+            <label class="f"><span>E<sub>ps</sub> (ksi)</span><input data-s="eps" inputmode="decimal"></label>
+            <label class="f"><span>Jacking stress (% f<sub>pu</sub>)</span><input data-s="jackPct" inputmode="decimal"></label>
+          </div>
+          <hr class="r">
+          <div class="grid g3">
+            <label class="f"><span>Ram effective area (in&sup2;)</span><input data-s="ramArea" inputmode="decimal" placeholder="from calibration cert">
+              <em>Required. Taken from the jack/gauge calibration certificate &mdash; not a catalog number.</em></label>
+            <label class="f"><span>Gauge correction (%)</span><input data-s="calPct" inputmode="decimal">
+              <em>Positive = gauge reads low, required pressure increases.</em></label>
+            <label class="f"><span>Jack / ram ID</span><input data-s="ramId"></label>
+            <label class="f"><span>Gauge ID</span><input data-s="gaugeId"></label>
+            <label class="f"><span>Calibration date</span><input data-s="calDate" placeholder="mm/dd/yy"></label>
+            <label class="f"><span>Calibration expires</span><input data-s="calExp" placeholder="mm/dd/yy"></label>
+          </div>
+          <hr class="r">
+          <div class="grid g3">
+            <label class="f"><span>Required f&prime;<sub>ci</sub> at stressing (psi)</span><input data-s="fciReq" inputmode="numeric"></label>
+            <label class="f"><span>Friction allowance for estimator (%)</span><input data-s="frictionPct" inputmode="decimal">
+              <em>Only affects the estimator button on the Tendons tab. Shop-drawing elongations are never adjusted.</em></label>
+          </div>
+          <div class="note" id="pjNote" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Measurement &amp; units</h3>
+        <div class="body">
+          <div class="grid g3">
+            <label class="f"><span>Length display</span>
+              <select data-s="lenMode">
+                <option value="frac">Inch fractions &mdash; 9-7/16</option>
+                <option value="dec">Decimal inches &mdash; 9.438</option>
+              </select>
+            </label>
+            <label class="f"><span>Fraction precision</span>
+              <select data-s="den">
+                <option value="8">Nearest 1/8</option>
+                <option value="16">Nearest 1/16</option>
+                <option value="32">Nearest 1/32</option>
+              </select>
+            </label>
+          </div>
+          <div class="note" style="margin-top:12px">
+            <strong>Entry accepts either, always.</strong> Whatever is set above, every length field takes
+            <code>9 7/16</code>, <code>9-7/16</code>, <code>7/16</code>, <code>9.4375</code> or <code>9&frac12;</code>
+            and understands all of them. The setting only controls how calculated elongations are <em>shown</em>.
+          </div>
+          <div class="note" id="resNote" style="margin-top:8px"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Acceptance criteria</h3>
+        <div class="body">
+          <div class="grid g4">
+            <label class="f"><span>Individual tendon &plusmn;%</span><input data-s="tolInd" inputmode="decimal"></label>
+            <label class="f"><span>Group average &plusmn;%</span><input data-s="tolGrp" inputmode="decimal"></label>
+            <label class="f"><span>Lift-off min % GUTS</span><input data-s="loMin" inputmode="decimal"></label>
+            <label class="f"><span>Lift-off max % GUTS</span><input data-s="loMax" inputmode="decimal"></label>
+          </div>
+          <div class="note rfi" style="margin-top:12px">
+            <strong>Verify before this sheet goes to the field.</strong> The tolerances above are whatever you type here &mdash; the app does not assert them as code.
+            Elongation acceptance is addressed in PTI DC10.2 and in ACI 318 Ch. 26; I have not verified the exact section numbers for the editions
+            adopted on this job, so do not cite a section from this app in an RFI or a submittal. Confirm against (1) the PT shop drawing General Notes,
+            (2) the project specification, and (3) the edition the AHJ has adopted. Where the shop drawing and the spec differ, the
+            conflict is an RFI &mdash; not a field judgment call.
+          </div>
+          <div class="note" style="margin-top:8px">
+            <strong>Lift-off band.</strong> The min/max % GUTS above brackets the effective force you expect to see after seating and short-term losses.
+            If the shop drawing or spec does not state a lift-off acceptance band, that is a gap &mdash; RFI it rather than picking a number here and
+            letting the record imply it was approved.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Stressing certification</h3>
+        <div class="body">
+          <p class="footnote" style="margin:0 0 14px">
+            Leave blank and the field sheet prints these as empty form fields for the crew to sign. Fill them in when you
+            transcribe the crew's sheet, and the completed record prints them as part of the record.
+          </p>
+          <div class="grid g3">
+            <label class="f"><span>Date stressed</span><input data-s="dateStressed" placeholder="mm/dd/yy"></label>
+            <label class="f"><span>Stressed by</span><input data-s="stressedBy"></label>
+            <label class="f"><span>Concrete strength at stressing (psi)</span><input data-s="fciActual" inputmode="numeric"></label>
+            <label class="f"><span>Cylinder / test report no.</span><input data-s="cylNo"></label>
+            <label class="f"><span>Witnessed by / inspector</span><input data-s="witnessedBy"></label>
+            <label class="f"><span>JC Concrete superintendent</span><input data-s="superintendent"></label>
+          </div>
+          <div class="note" id="fciNote" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Sheet &amp; distribution</h3>
+        <div class="body">
+          <div class="grid g3">
+            <label class="f"><span>Paper size (landscape)</span>
+              <select data-s="paper">
+                <option value="letter">Letter &mdash; 11 &times; 8.5</option>
+                <option value="legal">Legal &mdash; 14 &times; 8.5</option>
+                <option value="tabloid">Tabloid &mdash; 17 &times; 11</option>
+              </select>
+            </label>
+            <label class="f"><span>Email to</span><input data-s="emailTo" type="text" inputmode="email" placeholder="pm@gc.com"></label>
+            <label class="f"><span>Email cc</span><input data-s="emailCc" type="text" inputmode="email"></label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PLANS ================= -->
+    <section class="panel" id="p-plans" role="tabpanel">
+      <header>
+        <h2>Load the PT plan</h2>
+        <p>Do this part on a computer. The plan is read locally in your browser &mdash; nothing is uploaded anywhere.</p>
+      </header>
+
+      <div class="card">
+        <h3>Shop drawing / PT plan</h3>
+        <div class="body">
+          <div class="drop" id="drop" tabindex="0" role="button">
+            <div class="big">Drop the PT plan PDF here</div>
+            <div class="sm">or tap to choose a file &middot; stays on this device</div>
+          </div>
+          <input type="file" id="file" accept="application/pdf,.pdf" style="display:none">
+          <div id="fileInfo" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <div class="card" id="candCard" style="display:none">
+        <h3>Candidate tendon marks <button class="btn sm ghost" id="candAll">Select all</button></h3>
+        <div class="body">
+          <div class="note">
+            <strong>Read this before trusting it.</strong> This is pattern-matching on the drawing's text layer, not drawing interpretation.
+            It collects strings shaped like a tendon mark &mdash; one to three letters followed by a number, such as T12, B4 or U-7.
+            It cannot tell a tendon mark from a detail bubble, a rebar call-out, or a column line, and it will miss any mark that does not
+            fit that shape. Check every one against the tendon schedule before you generate a sheet, and enter lengths and calculated
+            elongations from the schedule yourself.
+          </div>
+          <div class="chips" id="cands" style="margin-top:10px"></div>
+          <div class="btnrow" style="margin-top:12px">
+            <button class="btn primary" id="candAdd">Add selected as tendons</button>
+            <button class="btn ghost" id="candClear">Clear selection</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="txtCard" style="display:none">
+        <h3>Extracted text layer <span id="txtCount" class="mono" style="font-size:11px;color:var(--ink-3)"></span></h3>
+        <div class="body">
+          <label class="f" style="margin-bottom:10px"><span>Search</span><input id="txtFind" placeholder="e.g. ELONG, TENDON, SCHEDULE"></label>
+          <pre class="txtdump" id="txtDump"></pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Build the tendon list</h3>
+        <div class="body">
+          <p class="footnote" style="margin:0 0 14px">
+            Three ways in. Bulk range and paste-from-spreadsheet are the ones that hold up on a real job &mdash;
+            plan text extraction is a shortcut, not a source of record.
+          </p>
+
+          <div class="eyebrow" style="margin-bottom:8px">Bulk range</div>
+          <div class="grid g4">
+            <label class="f"><span>Prefix</span><input id="bkPre" placeholder="T" value="T"></label>
+            <label class="f"><span>From</span><input id="bkFrom" inputmode="numeric" value="1"></label>
+            <label class="f"><span>To</span><input id="bkTo" inputmode="numeric" value="24"></label>
+            <label class="f"><span>Suffix</span><input id="bkSuf" placeholder="optional"></label>
+            <label class="f"><span>Strands ea.</span><input id="bkStr" inputmode="numeric" value="1"></label>
+            <label class="f"><span>Length ea. (ft)</span><input id="bkLen" inputmode="decimal" placeholder="optional"></label>
+            <label class="f"><span>Group / band</span><input id="bkGrp" placeholder="e.g. Banded N-S"></label>
+          </div>
+          <div class="btnrow" style="margin-top:12px">
+            <button class="btn primary" id="bkAdd">Add range</button>
+          </div>
+
+          <hr class="r">
+
+          <div class="eyebrow" style="margin-bottom:8px">Paste from the tendon schedule</div>
+          <p class="footnote" style="margin:0 0 8px">
+            Copy rows straight out of Excel or a PDF table. Tab, comma, or multi-space separated. Column order:
+            <code>mark &nbsp; grid/location &nbsp; strands &nbsp; length&nbsp;ft &nbsp; calc&nbsp;elong&nbsp;in &nbsp; group</code>.
+            Trailing columns can be left off.
+          </p>
+          <textarea id="pasteBox" rows="6" placeholder="T1&#9;Grid A-B&#9;1&#9;104.5&#9;9.42&#9;Banded N-S&#10;T2&#9;Grid B-C&#9;1&#9;104.5&#9;9.42&#9;Banded N-S"></textarea>
+          <div class="btnrow" style="margin-top:10px">
+            <button class="btn primary" id="pasteAdd">Add pasted rows</button>
+            <button class="btn ghost" id="pasteClear">Clear</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TENDONS ================= -->
+    <section class="panel" id="p-tendons" role="tabpanel">
+      <header>
+        <h2>Tendon schedule &amp; field entry</h2>
+        <p>Static columns come from the shop drawing. Shaded columns are what the crew records. Everything else calculates.</p>
+      </header>
+
+      <div class="stats" id="tStats"></div>
+
+      <div class="rowlead">
+        <button class="btn primary sm" id="addRow">+ Add tendon</button>
+        <button class="btn ghost sm" id="estAll">Estimate blank elongations</button>
+        <button class="btn ghost sm" id="clearField">Clear field entries</button>
+        <span class="sp"></span>
+        <span class="footnote" id="viewHint"></span>
+      </div>
+
+      <div class="note rfi" id="estNote" style="display:none;margin-bottom:14px"></div>
+
+      <div id="tendonHost"></div>
+
+      <div class="note" style="margin-top:14px">
+        <strong>Mark A / Mark B.</strong> A is the reference measurement taken before stressing, B is the same measurement after.
+        Gross = B &minus; A. Net = gross minus the seating / shim deduction you enter. Keep the method consistent across the whole
+        pour &mdash; a sheet where half the crew measured to the anchor face and half to the wedge plate is not a record, and it
+        will not survive a third-party review.
+      </div>
+    </section>
+
+    <!-- ================= REVIEW ================= -->
+    <section class="panel" id="p-review" role="tabpanel">
+      <header>
+        <h2>Review before it leaves the job</h2>
+        <p>Coordination, documentation, and cost exposure are separated below because different people resolve each one.</p>
+      </header>
+      <div id="reviewHost"></div>
+    </section>
+
+    <!-- ================= EXPORT ================= -->
+    <section class="panel" id="p-export" role="tabpanel">
+      <header>
+        <h2>Export &amp; send</h2>
+        <p>Generate the blank fillable sheet for the crew, or the completed record for the GC and the file.</p>
+      </header>
+
+      <div class="card">
+        <h3>For the field &mdash; fillable PDF</h3>
+        <div class="body">
+          <p class="footnote" style="margin:0 0 12px">
+            Real PDF form fields with calculation scripts. Gross, net elongation, % difference, status, lift-off force and % GUTS
+            all compute as the crew types.
+          </p>
+          <div class="note stop" style="margin-bottom:12px">
+            <strong>The calculations only run in Adobe Acrobat Reader.</strong> iPadOS Files, Safari, Preview, Chrome's viewer and
+            most markup apps display the fields but will not execute the math &mdash; the crew would see blanks and assume the sheet
+            is broken. Install the free <em>Adobe Acrobat Reader</em> app on the iPad and open the sheet there. Tell the crew this once,
+            in writing, or you will get the phone call.
+          </div>
+          <div class="btnrow">
+            <button class="btn primary" id="genBlank">Generate fillable sheet</button>
+            <button class="btn ghost" id="genBlankShare">Share / email blank sheet</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>For the record &mdash; completed PDF</h3>
+        <div class="body">
+          <p class="footnote" style="margin:0 0 12px">
+            Whatever is entered on the Tendons tab, printed as fixed text with the calculations already resolved. No form fields,
+            nothing to accidentally overwrite. This is the version that goes to the GC, the inspector, and the job file.
+          </p>
+          <div class="btnrow">
+            <button class="btn primary" id="genFilled">Generate completed record</button>
+            <button class="btn ghost" id="genFilledShare">Share / email completed record</button>
+            <button class="btn ghost" id="genCsv">Export CSV</button>
+          </div>
+          <div class="note" style="margin-top:12px" id="shareNote"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Email draft</h3>
+        <div class="body">
+          <div class="grid g2">
+            <label class="f"><span>To</span><input data-s="emailTo" inputmode="email"></label>
+            <label class="f"><span>Cc</span><input data-s="emailCc" inputmode="email"></label>
+          </div>
+          <label class="f" style="margin-top:12px"><span>Subject</span><input id="mailSubj"></label>
+          <label class="f" style="margin-top:12px"><span>Body</span><textarea id="mailBody" rows="12"></textarea></label>
+          <div class="btnrow" style="margin-top:12px">
+            <button class="btn primary" id="mailOpen">Open in mail app</button>
+            <button class="btn ghost" id="mailCopy">Copy body</button>
+            <button class="btn ghost" id="mailRebuild">Rebuild from record</button>
+          </div>
+          <div class="note" style="margin-top:12px">
+            <strong>Attach the PDF yourself.</strong> A mail link cannot carry an attachment &mdash; that is a limit of
+            <code>mailto:</code>, not a setting. On an iPad use <em>Share / email</em> above and pick Mail; the PDF goes with it.
+            On a computer, generate the PDF first, then open the draft and attach it. Nothing is ever sent from this app
+            without you pressing send.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Backup &amp; transfer</h3>
+        <div class="body">
+          <p class="footnote" style="margin:0 0 12px">
+            Records live in this browser's local storage. They do not sync. Use the JSON file to move a record from the office
+            computer to the iPad, or to keep a copy off the device.
+          </p>
+          <div class="btnrow">
+            <button class="btn ghost" id="expJson">Download record (JSON)</button>
+            <button class="btn ghost" id="expJsonAll">Download all records</button>
+            <button class="btn ghost" id="impJsonBtn">Import JSON</button>
+          </div>
+          <input type="file" id="impJson" accept="application/json,.json" style="display:none">
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   0. small utilities
+   ============================================================ */
+const $  = (s,r) => (r||document).querySelector(s);
+const $$ = (s,r) => Array.from((r||document).querySelectorAll(s));
+const esc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function num(v){
+  if(v===null||v===undefined) return NaN;
+  const s = String(v).replace(/,/g,'').trim();
+  if(s==='') return NaN;
+  const x = parseFloat(s);
+  return isFinite(x) ? x : NaN;
+}
+function fx(v,d){ return isFinite(v) ? v.toFixed(d===undefined?2:d) : ''; }
+function fxo(v,d){ const s = fx(v,d); return s===''?'—':s; }
+function pad(n,w){ return String(n).padStart(w,'0'); }
+
+/* ---------- inch fractions ----------
+   Crews read a tape in sixteenths, so every length is entered and shown as a
+   fraction. Parsing is deliberately forgiving: "9 7/16", "9-7/16", "7/16",
+   "9.4375", 9½ all mean the same thing. Arithmetic always runs on the exact
+   decimal — only the display is rounded. */
+function gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ const t=a%b; a=b; b=t; } return a||1; }
+const VULGAR = {'½':'1/2','⅓':'1/3','⅔':'2/3','¼':'1/4','¾':'3/4','⅕':'1/5','⅖':'2/5',
+  '⅗':'3/5','⅘':'4/5','⅙':'1/6','⅚':'5/6','⅛':'1/8','⅜':'3/8','⅝':'5/8','⅞':'7/8'};
+
+function parseLen(v){
+  if(v===null||v===undefined) return NaN;
+  let s = String(v);
+  s = s.replace(/[½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]/g, m=>' '+VULGAR[m]);
+  s = s.replace(/[”″"'’]/g,'').replace(/,/g,'').trim();
+  if(!s) return NaN;
+  let sign = 1;
+  if(s[0]==='-'){ sign=-1; s=s.slice(1); }
+  else if(s[0]==='+'){ s=s.slice(1); }
+  s = s.trim().replace(/\s+/g,' ');
+  if(!s) return NaN;
+  // whole plus fraction: "9 7/16", "9-7/16", "9 - 7/16"
+  let m = /^(\d+(?:\.\d+)?)[\s-]+(\d+)\s*\/\s*(\d+)$/.exec(s);
+  if(m){ const d=+m[3]; return d ? sign*(+m[1] + (+m[2])/d) : NaN; }
+  // bare fraction: "7/16"
+  m = /^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/.exec(s);
+  if(m){ const d=+m[2]; return d ? sign*((+m[1])/d) : NaN; }
+  // plain decimal or whole number
+  if(/^\d*\.?\d+$/.test(s)) return sign*parseFloat(s);
+  return NaN;
+}
+function fmtFrac(v,den){
+  if(!isFinite(v)) return '';
+  den = den || 16;
+  const neg = v < 0;
+  const x = Math.abs(v);
+  let w = Math.floor(x + 1e-9);
+  let n = Math.round((x - w) * den);
+  if(n >= den){ w++; n = 0; }
+  let out;
+  if(n > 0){
+    const g = gcd(n, den);
+    out = (w ? w+'-' : '') + (n/g) + '/' + (den/g);
+  } else out = String(w);
+  return (neg?'-':'') + out;
+}
+// exactly representable at this denominator? (used so a decimal entry is never destroyed)
+function exactAt(v,den){ return isFinite(v) && Math.abs(v*den - Math.round(v*den)) < 1e-9; }
+function fmtLen(v,r){
+  if(!isFinite(v)) return '';
+  if(r && r.lenMode === 'dec') return v.toFixed(3);
+  return fmtFrac(v, num(r&&r.den)||16);
+}
+function fmtLenO(v,r){ const s=fmtLen(v,r); return s===''?'—':s; }
+
+let toastT=null;
+function toast(msg){
+  const t=$('#toast'); t.textContent=msg; t.classList.add('on');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),2600);
+}
+function today(){
+  const d=new Date();
+  return pad(d.getMonth()+1,2)+'/'+pad(d.getDate(),2)+'/'+d.getFullYear();
+}
+function slug(s){ return String(s||'record').replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,60) || 'record'; }
+
+/* ============================================================
+   1. data model + persistence
+   ============================================================ */
+const LS_KEY = 'strandline.v1';
+
+function blankTendon(mark){
+  return {
+    mark: mark||'', loc:'', grp:'', strands:1,
+    len:'', calc:'', est:false,
+    apsi:'', mka:'', mkb:'', seat:'', lopsi:'', notes:''
+  };
+}
+function blankRecord(name){
+  return {
+    id: 'r'+Math.random().toString(36).slice(2,10),
+    recName: name||'New record',
+    job:'', jobNo:'', gc:'', bldg:'', pour:'', level:'', ptSupplier:'', shopDwg:'', eor:'',
+    dia:'0.5', aps:'0.153', fpu:'270', eps:'28500', jackPct:'80',
+    ramArea:'', calPct:'0', ramId:'', gaugeId:'', calDate:'', calExp:'',
+    fciReq:'', frictionPct:'0',
+    dateStressed:'', stressedBy:'', fciActual:'', cylNo:'', witnessedBy:'', superintendent:'',
+    tolInd:'7', tolGrp:'5', loMin:'65', loMax:'80',
+    lenMode:'frac', den:'16',
+    paper:'letter', emailTo:'', emailCc:'',
+    tendons:[]
+  };
+}
+
+let DB = { active:null, records:[] };
+
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){
+      const p = JSON.parse(raw);
+      if(p && Array.isArray(p.records) && p.records.length){
+        DB = p;
+        DB.records.forEach(r=>{
+          const b = blankRecord();
+          for(const k in b) if(!(k in r)) r[k]=b[k];
+        });
+        if(!DB.records.some(r=>r.id===DB.active)) DB.active = DB.records[0].id;
+        return;
+      }
+    }
+  }catch(e){ /* corrupt store: fall through to a fresh one rather than dying */ }
+  const r = blankRecord('New record');
+  DB = { active:r.id, records:[r] };
+}
+let saveT=null, saveWarned=false;
+function save(){
+  clearTimeout(saveT);
+  saveT = setTimeout(()=>{
+    try{ localStorage.setItem(LS_KEY, JSON.stringify(DB)); saveWarned=false; }
+    catch(e){
+      if(saveWarned) return;
+      saveWarned = true;
+      toast('Not saving to this browser — export the record as JSON');
+    }
+  }, 200);
+}
+function rec(){ return DB.records.find(r=>r.id===DB.active) || DB.records[0]; }
+
+/* ============================================================
+   2. engineering calculations
+   ============================================================ */
+const APS_BY_DIA = { '0.5':'0.153', '0.6':'0.217' };
+
+const C = {
+  aps:  r => num(r.aps),
+  fpu:  r => num(r.fpu),
+  eps:  r => num(r.eps),
+  jack: r => num(r.jackPct),
+  ram:  r => num(r.ramArea),
+  cal:  r => { const v=num(r.calPct); return isFinite(v)?v:0; },
+
+  // jacking force in one strand, kips
+  pjStrand: r => {
+    const a=C.aps(r), f=C.fpu(r), j=C.jack(r);
+    return (isFinite(a)&&isFinite(f)&&isFinite(j)) ? j/100*f*a : NaN;
+  },
+  // guaranteed ultimate tensile strength of the tendon, kips
+  guts: (r,t) => {
+    const a=C.aps(r), f=C.fpu(r), n=num(t.strands)||1;
+    return (isFinite(a)&&isFinite(f)) ? f*a*n : NaN;
+  },
+  // total jacking force for the tendon, kips
+  pjTendon: (r,t) => { const p=C.pjStrand(r), n=num(t.strands)||1; return isFinite(p)?p*n:NaN; },
+
+  // required gauge pressure, psi  (one strand at a time -> ram sees one strand)
+  reqPsi: r => {
+    const p=C.pjStrand(r), A=C.ram(r);
+    if(!isFinite(p)||!isFinite(A)||A<=0) return NaN;
+    return p*1000/A*(1+C.cal(r)/100);
+  },
+  // theoretical elongation estimate, in.   d = 12 * Pj * L / (Aps * Eps)
+  estElong: (r,t) => {
+    const p=C.pjStrand(r), L=num(t.len), a=C.aps(r), E=C.eps(r), fr=num(r.frictionPct)||0;
+    if(!isFinite(p)||!isFinite(L)||!isFinite(a)||!isFinite(E)||a<=0||E<=0) return NaN;
+    return 12*p*L/(a*E)*(1-fr/100);
+  },
+
+  // length fields accept fractions, so they must never go through num()
+  calcElong: t => parseLen(t.calc),
+  gross: t => { const a=parseLen(t.mka), b=parseLen(t.mkb); return (isFinite(a)&&isFinite(b)) ? b-a : NaN; },
+  net:   t => { const g=C.gross(t), s=parseLen(t.seat); return isFinite(g) ? g-(isFinite(s)?s:0) : NaN; },
+  pct:   t => { const c=parseLen(t.calc), n=C.net(t); return (isFinite(c)&&c>0&&isFinite(n)) ? (n-c)/c*100 : NaN; },
+
+  loForce: (r,t) => {
+    const psi=num(t.lopsi), A=C.ram(r);
+    if(!isFinite(psi)||!isFinite(A)||A<=0) return NaN;
+    return psi*A/1000/(1+C.cal(r)/100);
+  },
+  loGuts: (r,t) => {
+    const f=C.loForce(r,t), g=C.guts(r,t);
+    return (isFinite(f)&&isFinite(g)&&g>0) ? f/g*100 : NaN;
+  },
+
+  status: (r,t) => {
+    const p=C.pct(t); if(!isFinite(p)) return '';
+    return Math.abs(p) <= (num(r.tolInd)||7) ? 'ACCEPT' : 'CHECK';
+  },
+  loStatus: (r,t) => {
+    const g=C.loGuts(r,t); if(!isFinite(g)) return '';
+    const lo=num(r.loMin), hi=num(r.loMax);
+    if(isFinite(lo)&&g<lo) return 'LOW';
+    if(isFinite(hi)&&g>hi) return 'HIGH';
+    return 'OK';
+  },
+
+  summary: r => {
+    const T=r.tendons;
+    let sc=0, sm=0, n=0, entered=0, bad=0, loBad=0, loN=0;
+    T.forEach(t=>{
+      const c=parseLen(t.calc), m=C.net(t);
+      if(isFinite(m)) entered++;
+      if(isFinite(c)&&c>0&&isFinite(m)){
+        sc+=c; sm+=m; n++;
+        if(Math.abs((m-c)/c*100) > (num(r.tolInd)||7)) bad++;
+      }
+      const ls=C.loStatus(r,t);
+      if(ls){ loN++; if(ls!=='OK') loBad++; }
+    });
+    const grpPct = (n>0 && sc>0) ? (sm-sc)/sc*100 : NaN;
+    return {count:T.length, entered, paired:n, sumCalc:sc, sumMeas:sm, grpPct, bad, loN, loBad,
+            grpOk: !isFinite(grpPct) ? null : Math.abs(grpPct) <= (num(r.tolGrp)||5)};
+  }
+};
+
+/* ============================================================
+   3. PDF writer  (AcroForm, zero dependencies)
+   ------------------------------------------------------------
+   Everything is Latin-1, so string length == byte length and the
+   xref offsets are just character counts.
+   ============================================================ */
+const Pdf = {
+  // escape for a PDF literal string
+  s(v){
+    return String(v==null?'':v)
+      .replace(/[‘’]/g,"'").replace(/[“”]/g,'"')
+      .replace(/[–—]/g,'-').replace(/…/g,'...')
+      .replace(/[±]/g,'+/-').replace(/[′″]/g,'"')
+      .replace(/[^\x20-\x7E\n]/g,'')
+      .replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)')
+      .replace(/\n/g,'\\n');
+  },
+  // widths for Helvetica / Helvetica-Bold, /1000 em, for the chars we actually emit
+  _wR:null,_wB:null,
+  _widthTable(bold){
+    // AFM widths, ASCII 32..126
+    const reg=[278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+    const bld=[278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584];
+    return bold?bld:reg;
+  },
+  width(str,size,bold){
+    const w = bold ? (this._wB||(this._wB=this._widthTable(true))) : (this._wR||(this._wR=this._widthTable(false)));
+    let t=0; const s=String(str==null?'':str);
+    for(let i=0;i<s.length;i++){
+      const c=s.charCodeAt(i);
+      t += (c>=32&&c<=126) ? w[c-32] : 556;
+    }
+    return t*size/1000;
+  },
+  fit(str,maxW,size,bold){
+    let s=String(str==null?'':str);
+    if(this.width(s,size,bold)<=maxW) return s;
+    while(s.length>1 && this.width(s+'…',size,bold)>maxW) s=s.slice(0,-1);
+    return s+'...';
+  },
+  wrap(str,maxW,size,bold,maxLines){
+    const words=String(str==null?'':str).split(/\s+/).filter(Boolean);
+    const lines=[]; let cur='';
+    for(const w of words){
+      const t = cur ? cur+' '+w : w;
+      if(this.width(t,size,bold)<=maxW || !cur) cur=t;
+      else { lines.push(cur); cur=w; }
+      if(maxLines && lines.length>=maxLines){ break; }
+    }
+    if(cur && (!maxLines || lines.length<maxLines)) lines.push(cur);
+    if(maxLines && lines.length>maxLines) lines.length=maxLines;
+    return lines.length?lines:[''];
+  },
+
+  Doc(){
+    const objs=[];
+    return {
+      alloc(){ objs.push(null); return objs.length; },
+      put(n,body){ objs[n-1]=body; return n; },
+      add(body){ const n=this.alloc(); return this.put(n,body); },
+      stream(dict,data){
+        return this.add('<<'+(dict?' '+dict:'')+' /Length '+data.length+' >>\nstream\n'+data+'\nendstream');
+      },
+      build(infoRef){
+        let out='%PDF-1.7\n%\xE2\xE3\xCF\xD3\n';
+        const off=[];
+        for(let i=0;i<objs.length;i++){
+          off.push(out.length);
+          out += (i+1)+' 0 obj\n'+(objs[i]==null?'null':objs[i])+'\nendobj\n';
+        }
+        const x=out.length;
+        out += 'xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n';
+        for(const o of off) out += pad(o,10)+' 00000 n \n';
+        out += 'trailer\n<< /Size '+(objs.length+1)+' /Root 1 0 R'+
+               (infoRef?' /Info '+infoRef+' 0 R':'')+' >>\nstartxref\n'+x+'\n%%EOF\n';
+        const b=new Uint8Array(out.length);
+        for(let i=0;i<out.length;i++) b[i]=out.charCodeAt(i)&0xFF;
+        return b;
+      }
+    };
+  }
+};
+
+/* content-stream painter */
+function Painter(){
+  const ops=[];
+  return {
+    ops,
+    gray(g){ ops.push(fx(g,3)+' g'); return this; },
+    strokeGray(g){ ops.push(fx(g,3)+' G'); return this; },
+    rgb(r,g,b){ ops.push(fx(r,3)+' '+fx(g,3)+' '+fx(b,3)+' rg'); return this; },
+    strokeRgb(r,g,b){ ops.push(fx(r,3)+' '+fx(g,3)+' '+fx(b,3)+' RG'); return this; },
+    lw(w){ ops.push(fx(w,2)+' w'); return this; },
+    line(x1,y1,x2,y2){ ops.push(fx(x1,2)+' '+fx(y1,2)+' m '+fx(x2,2)+' '+fx(y2,2)+' l S'); return this; },
+    rect(x,y,w,h){ ops.push(fx(x,2)+' '+fx(y,2)+' '+fx(w,2)+' '+fx(h,2)+' re S'); return this; },
+    fillRect(x,y,w,h){ ops.push(fx(x,2)+' '+fx(y,2)+' '+fx(w,2)+' '+fx(h,2)+' re f'); return this; },
+    text(x,y,str,size,bold){
+      ops.push('BT /'+(bold?'HeBo':'Helv')+' '+fx(size,2)+' Tf 1 0 0 1 '+fx(x,2)+' '+fx(y,2)+' Tm ('+Pdf.s(str)+') Tj ET');
+      return this;
+    },
+    textR(x,y,str,size,bold){ return this.text(x-Pdf.width(str,size,bold),y,str,size,bold); },
+    textC(x,y,str,size,bold){ return this.text(x-Pdf.width(str,size,bold)/2,y,str,size,bold); },
+    out(){ return ops.join('\n'); }
+  };
+}
+
+/* ---------- column layout ---------- */
+const PAPER = { letter:[792,612], legal:[1008,612], tabloid:[1224,792] };
+
+const COLS = [
+  {k:'mark',  h:'TENDON MARK',     w:56, kind:'static', al:'l'},
+  {k:'loc',   h:'GRID / LOCATION', w:50, kind:'static', al:'l'},
+  {k:'str',   h:'S',               w:20, kind:'static', al:'c'},
+  {k:'len',   h:'LENGTH FT',       w:38, kind:'static', al:'r'},
+  {k:'calc',  h:'CALC ELONG IN',   w:44, kind:'static', al:'r'},
+  {k:'rpsi',  h:'REQ GAUGE PSI',   w:40, kind:'static', al:'r'},
+  {k:'apsi',  h:'ACT GAUGE PSI',   w:40, kind:'entry',  al:'r'},
+  {k:'mka',   h:'MARK A IN',       w:38, kind:'entry',  al:'r'},
+  {k:'mkb',   h:'MARK B IN',       w:38, kind:'entry',  al:'r'},
+  {k:'gross', h:'GROSS IN',        w:38, kind:'calc',   al:'r'},
+  {k:'seat',  h:'SEAT / SHIM IN',  w:34, kind:'entry',  al:'r'},
+  {k:'net',   h:'NET ELONG IN',    w:44, kind:'calc',   al:'r'},
+  {k:'pct',   h:'% DIFF',          w:36, kind:'calc',   al:'r'},
+  {k:'st',    h:'STATUS',          w:40, kind:'calc',   al:'c'},
+  {k:'lopsi', h:'L/O GAUGE PSI',   w:38, kind:'entry',  al:'r'},
+  {k:'lof',   h:'L/O FORCE K',     w:42, kind:'calc',   al:'r'},
+  {k:'loguts',h:'% GUTS',          w:34, kind:'calc',   al:'r'},
+  {k:'notes', h:'NOTES',           w:70, kind:'entry',  al:'l'}
+];
+const BANDS = [
+  {label:'FROM SHOP DRAWING', n:6},
+  {label:'RECORDED IN FIELD / CALCULATED', n:8},
+  {label:'LIFT-OFF VERIFICATION', n:3},
+  {label:'', n:1}
+];
+
+function layout(r){
+  const [W,H] = PAPER[r.paper] || PAPER.letter;
+  const M = 22;
+  const usable = W - 2*M;
+  const base = COLS.reduce((a,c)=>a+c.w,0);
+  const k = usable/base;
+  let x = M;
+  const cols = COLS.map(c=>{ const o={...c, w:c.w*k, x}; x+=o.w; return o; });
+  return {W,H,M,cols,usable};
+}
+
+/* ---------- shared PDF page furniture ---------- */
+function drawFurniture(p, L, r, pageNo, pageCt, filled){
+  const {W,H,M,usable,cols} = L;
+  let y = H - M;
+
+  // hazard stripe + safety line
+  const hb = 5;
+  y -= hb;
+  p.gray(0.08).fillRect(M,y,usable,hb);
+  p.rgb(0.949,0.773,0.067);
+  const stripe = 6;
+  for(let sx=M; sx<M+usable; sx+=stripe*2) p.fillRect(sx, y, Math.min(stripe, M+usable-sx), hb);
+  const sh = 12;
+  y -= sh;
+  p.rgb(0.949,0.773,0.067).fillRect(M, y, usable, sh);
+  p.gray(0.08);
+  p.text(M+5, y+3.6, 'STRESSING SAFETY: CLEAR THE LIVE END. NO PERSONNEL BEHIND OR IN LINE WITH THE JACK. EXCLUSION ZONE AT BOTH ENDS. SAFETY CAGE IN PLACE UNTIL THE RAM IS RELEASED.', 6.4, true);
+  y -= 6;
+
+  // title row
+  p.gray(0.08);
+  p.text(M, y-13, 'TENDON ELONGATION & LIFT-OFF RECORD', 15, true);
+  p.gray(0.35);
+  p.text(M, y-22.5, 'JC CONCRETE, LLC   -   POST-TENSIONED SLAB STRESSING RECORD', 7, true);
+  p.gray(0.08);
+  p.textR(M+usable, y-13, (filled?'COMPLETED RECORD':'FIELD SHEET'), 9, true);
+  p.gray(0.35);
+  p.textR(M+usable, y-22.5, 'SHEET '+pageNo+' OF '+pageCt, 7.5, true);
+  y -= 30;
+
+  // titleblock cells
+  const cells = [
+    ['JOB', r.job], ['JOB NO.', r.jobNo], ['BUILDING', r.bldg], ['SLAB / POUR', r.pour],
+    ['LEVEL', r.level], ['GENERAL CONTRACTOR', r.gc], ['PT SUPPLIER', r.ptSupplier],
+    ['SHOP DWG / REV', r.shopDwg],
+    ['STRAND', (r.dia==='custom'?'':(r.dia+'" ')) + fx(C.fpu(r),0)+' KSI'],
+    ['Aps (IN2)', fx(C.aps(r),3)],
+    ['Eps (KSI)', fx(C.eps(r),0)],
+    ['JACK TO', fx(C.jack(r),0)+'% fpu = '+fxo(C.pjStrand(r),2)+' K/STRAND'],
+    ['RAM AREA (IN2)', fx(C.ram(r),3)],
+    ['GAUGE CORR.', fx(C.cal(r),1)+'%'],
+    ['REQ. GAUGE PSI', isFinite(C.reqPsi(r))?fx(C.reqPsi(r),0):'SEE NOTE'],
+    ['RAM / GAUGE ID', [r.ramId,r.gaugeId].filter(Boolean).join(' / ')],
+    ['CALIB. DATE', r.calDate], ['CALIB. EXPIRES', r.calExp],
+    ['REQ. f\'ci (PSI)', r.fciReq],
+    ['TOLERANCE', '+/-'+fx(num(r.tolInd),1)+'% IND.  +/-'+fx(num(r.tolGrp),1)+'% AVG'],
+    ['LENGTHS', r.lenMode==='dec' ? 'DECIMAL INCHES' : ('INCHES TO NEAREST 1/'+(num(r.den)||16))]
+  ];
+  const perRow = Math.max(5, Math.floor(usable/128));
+  const rows = Math.ceil(cells.length/perRow);
+  const cw = usable/perRow, ch = 20;
+  const top = y;
+  p.lw(0.7).strokeGray(0.45);
+  p.rect(M, y-rows*ch, usable, rows*ch);
+  p.lw(0.4).strokeGray(0.72);
+  for(let i=0;i<cells.length;i++){
+    const rr = Math.floor(i/perRow), cc = i%perRow;
+    const cx = M + cc*cw, cy = top - rr*ch;
+    if(cc>0) p.line(cx, cy, cx, cy-ch);
+    if(rr>0) p.line(cx, cy, cx+cw, cy);
+    p.gray(0.45); p.text(cx+3.5, cy-7.5, cells[i][0], 5.4, true);
+    p.gray(0.08); p.text(cx+3.5, cy-16.5, Pdf.fit(cells[i][1]||'-', cw-7, 8, false), 8, false);
+  }
+  y = top - rows*ch - 9;
+
+  // column band header
+  const bandH = 10, headH = 24;
+  p.gray(0.85).fillRect(M, y-bandH, usable, bandH);
+  p.gray(0.90).fillRect(M, y-bandH-headH, usable, headH);
+  let bx = M, ci = 0;
+  p.gray(0.25);
+  for(const b of BANDS){
+    let bw = 0;
+    for(let i=0;i<b.n;i++) bw += cols[ci+i].w;
+    if(b.label) p.textC(bx+bw/2, y-bandH+3, b.label, 5.6, true);
+    ci += b.n; bx += bw;
+  }
+  // header text
+  p.gray(0.08);
+  for(const c of cols){
+    const lines = Pdf.wrap(c.h, c.w-5, 5.6, true, 3);
+    let ty = y-bandH-8.5;
+    for(const ln of lines){
+      if(c.al==='r') p.textR(c.x+c.w-3, ty, ln, 5.6, true);
+      else if(c.al==='c') p.textC(c.x+c.w/2, ty, ln, 5.6, true);
+      else p.text(c.x+2.5, ty, ln, 5.6, true);
+      ty -= 6.4;
+    }
+  }
+  // header rules
+  p.lw(0.4).strokeGray(0.55);
+  for(let i=1;i<cols.length;i++) p.line(cols[i].x, y, cols[i].x, y-bandH-headH);
+  p.lw(0.7).strokeGray(0.2);
+  p.line(M, y-bandH, M+usable, y-bandH);
+  p.line(M, y-bandH-headH, M+usable, y-bandH-headH);
+  p.lw(0.4).strokeGray(0.55);
+  p.line(M, y, M+usable, y);
+  p.line(M, y, M, y-bandH-headH);
+  p.line(M+usable, y, M+usable, y-bandH-headH);
+
+  return y - bandH - headH;
+}
+
+function drawFooter(p, L, r, y){
+  const {M,usable} = L;
+  const units = r.lenMode==='dec'
+    ? 'All lengths are decimal inches. '
+    : ('All lengths are inches, read and recorded to the nearest 1/'+(num(r.den)||16)+'. Enter fractions as 9 7/16 or 9-7/16. '+
+       'Percent difference is computed on the exact measured values, not on the displayed fraction. ');
+  const txt = units+
+    'Acceptance tolerances are those entered by the preparer (+/-'+fx(num(r.tolInd),1)+'% individual, +/-'+fx(num(r.tolGrp),1)+'% group average). '+
+    'Verify against the PT shop drawing General Notes and the project specification before use - the shop drawing governs. '+
+    'PTI DC10.2 and ACI 318 Ch. 26 address elongation acceptance; section numbers are not asserted here and must be confirmed for the adopted edition. '+
+    'Calculated elongations flagged (E) are estimated from L, Pj, Aps and Eps and are NOT shop-drawing values - replace before submitting. '+
+    'A tendon outside tolerance is not a rejection; it is a hold pending review by the PT supplier and the engineer of record.';
+  p.gray(0.42);
+  const lines = Pdf.wrap(txt, usable, 5.8, false, 5);
+  let ty = y;
+  for(const ln of lines){ p.text(M, ty, ln, 5.8, false); ty -= 7; }
+  return ty;
+}
+
+/* ---------- fillable AcroForm sheet ---------- */
+function buildPdf(r, filled){
+  const L = layout(r);
+  const doc = Pdf.Doc();
+
+  const catalog = doc.alloc();        // 1
+  const pagesRef = doc.alloc();       // 2
+  const acro = doc.alloc();           // 3
+  const fHelv = doc.add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  const fBold = doc.add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+  const resDict = '<< /Font << /Helv '+fHelv+' 0 R /HeBo '+fBold+' 0 R >> >>';
+
+  // Document-level helpers. Written in ES3 for Acrobat's interpreter, and with no
+  // non-ASCII literals (PDF literal strings are Latin-1 here) - the vulgar-fraction
+  // characters are matched by char code instead.
+  const DEN = num(r.den)||16;
+  const DECMODE = r.lenMode === 'dec' ? 1 : 0;
+  const docJs = doc.add('<< /S /JavaScript /JS ('+Pdf.s(
+      'function slN(v){ if(v===null||v===undefined) return NaN; var s=String(v).replace(/,/g,"").replace(/[^0-9eE+.\\-]/g,""); if(s==="") return NaN; var x=parseFloat(s); return isNaN(x)?NaN:x; }\n'+
+      'function slV(d,n){ try{ var f=d.getField(n); return f?slN(f.value):NaN; }catch(e){ return NaN; } }\n'+
+      'function slF(x,d){ return isNaN(x)?"":x.toFixed(d); }\n'+
+      // expand 1/2, 1/4, 1/8 ... typed as single characters
+      'function slX(s){ var o="", i, c, r; for(i=0;i<s.length;i++){ c=s.charCodeAt(i); r=null;\n'+
+      ' if(c==189)r="1/2"; else if(c==188)r="1/4"; else if(c==190)r="3/4";\n'+
+      ' else if(c==8531)r="1/3"; else if(c==8532)r="2/3";\n'+
+      ' else if(c==8539)r="1/8"; else if(c==8540)r="3/8"; else if(c==8541)r="5/8"; else if(c==8542)r="7/8";\n'+
+      ' o += r ? (" "+r) : s.charAt(i); } return o; }\n'+
+      // parse an inch length that may be written as a fraction
+      'function slL(v){ if(v===null||v===undefined) return NaN;\n'+
+      ' var s=slX(String(v)).replace(/[\\"\\u0027]/g,"").replace(/,/g,"");\n'+
+      ' s=s.replace(/^\\s+/,"").replace(/\\s+$/,"");\n'+
+      ' if(s==="") return NaN;\n'+
+      ' var sg=1; if(s.charAt(0)=="-"){sg=-1;s=s.substring(1);} else if(s.charAt(0)=="+"){s=s.substring(1);}\n'+
+      ' s=s.replace(/^\\s+/,"").replace(/\\s+$/,"").replace(/\\s+/g," ");\n'+
+      ' if(s==="") return NaN;\n'+
+      ' var m=/^([0-9]+(?:\\.[0-9]+)?)[\\s-]+([0-9]+)\\s*\\/\\s*([0-9]+)$/.exec(s);\n'+
+      ' if(m){ var d=parseFloat(m[3]); if(!d) return NaN; return sg*(parseFloat(m[1])+parseFloat(m[2])/d); }\n'+
+      ' m=/^([0-9]+(?:\\.[0-9]+)?)\\s*\\/\\s*([0-9]+(?:\\.[0-9]+)?)$/.exec(s);\n'+
+      ' if(m){ var d2=parseFloat(m[2]); if(!d2) return NaN; return sg*(parseFloat(m[1])/d2); }\n'+
+      ' if(/^[0-9]*\\.?[0-9]+$/.test(s)) return sg*parseFloat(s);\n'+
+      ' return NaN; }\n'+
+      'function slLV(d,n){ try{ var f=d.getField(n); return f?slL(f.value):NaN; }catch(e){ return NaN; } }\n'+
+      // format as a reduced mixed fraction
+      'function slFr(x,den){ if(isNaN(x)) return "";\n'+
+      ' var neg=x<0; x=Math.abs(x);\n'+
+      ' var w=Math.floor(x+1e-9), n=Math.round((x-w)*den);\n'+
+      ' if(n>=den){ w=w+1; n=0; }\n'+
+      ' var s;\n'+
+      ' if(n>0){ var a=n,b=den,t; while(b){ t=a%b; a=b; b=t; } var g=a?a:1;\n'+
+      '   s=(w?(String(w)+"-"):"")+String(n/g)+"/"+String(den/g); }\n'+
+      ' else { s=String(w); }\n'+
+      ' return (neg?"-":"")+s; }\n'+
+      'function slLen(x){ if(isNaN(x)) return ""; return '+DECMODE+' ? x.toFixed(3) : slFr(x,'+DEN+'); }\n'
+  )+') >>');
+
+  const tol = num(r.tolInd)||7, tolG = num(r.tolGrp)||5;
+  const loMin = num(r.loMin), loMax = num(r.loMax);
+  const ramA = C.ram(r), calP = C.cal(r);
+
+  const fields = [];   // field object refs, for /Fields
+  const order  = [];   // calculation order, for /CO
+  const pageRefs = [];
+
+  // paginate
+  const rowH = 19;
+  const probe = Painter();
+  const yStart = drawFurniture(probe, L, r, 1, 1, filled);
+  const footerH = 48;
+  const closeH  = 96;
+  const availNormal = yStart - L.M - footerH;
+  const availLast   = yStart - L.M - footerH - closeH;
+  const perNormal = Math.max(1, Math.floor(availNormal/rowH));
+  const perLast   = Math.max(1, Math.floor(availLast/rowH));
+
+  const T = r.tendons.length ? r.tendons : [blankTendon('')];
+  const pages = [];
+  let i = 0;
+  while(i < T.length){
+    const remaining = T.length - i;
+    if(remaining <= perLast){ pages.push([i, T.length]); i = T.length; }
+    else { pages.push([i, i+perNormal]); i += perNormal; }
+  }
+  if(!pages.length) pages.push([0,0]);
+  const pageCt = pages.length;
+
+  function mkField(pageRef, x, y, w, h, name, opts){
+    opts = opts||{};
+    const ro = opts.ro ? 1 : 0;
+    const q  = opts.al==='r' ? 2 : (opts.al==='c' ? 1 : 0);
+    const bg = opts.ro ? '/BG [0.925 0.929 0.918]' : '/BG [1 0.984 0.910]';
+    let d = '<< /Type /Annot /Subtype /Widget /FT /Tx /T ('+Pdf.s(name)+')';
+    if(opts.tip) d += ' /TU ('+Pdf.s(opts.tip)+')';
+    d += ' /Rect ['+fx(x,2)+' '+fx(y,2)+' '+fx(x+w,2)+' '+fx(y+h,2)+']';
+    d += ' /F 4 /P '+pageRef+' 0 R /Ff '+ro+' /Q '+q;
+    d += ' /DA (/Helv '+fx(opts.size||8,1)+' Tf 0 g) /V ()';
+    d += ' /MK << /BC [0.72 0.73 0.71] '+bg+' >>';
+    if(opts.js) d += ' /AA << /C << /S /JavaScript /JS ('+Pdf.s(opts.js)+') >> >>';
+    d += ' >>';
+    const ref = doc.add(d);
+    fields.push(ref);
+    if(opts.js) order.push(ref);
+    return ref;
+  }
+
+  pages.forEach((rng, pi) => {
+    const pageRef = doc.alloc();
+    pageRefs.push(pageRef);
+    const p = Painter();
+    const isLast = pi === pageCt-1;
+    let y = drawFurniture(p, L, r, pi+1, pageCt, filled);
+    const annots = [];
+    const cmap = {}; L.cols.forEach(c=>cmap[c.k]=c);
+
+    // rows
+    for(let ti = rng[0]; ti < rng[1]; ti++){
+      const t = T[ti];
+      const n = ti+1;
+      const rowTop = y, rowBot = y - rowH;
+
+      if(ti % 2 === 1){ p.gray(0.965).fillRect(L.M, rowBot, L.usable, rowH); }
+      p.lw(0.35).strokeGray(0.72);
+      p.line(L.M, rowBot, L.M+L.usable, rowBot);
+      for(let ci=1; ci<L.cols.length; ci++) p.line(L.cols[ci].x, rowTop, L.cols[ci].x, rowBot);
+      p.line(L.M, rowTop, L.M, rowBot);
+      p.line(L.M+L.usable, rowTop, L.M+L.usable, rowBot);
+
+      const ty = rowBot + 6;
+      const put = (key, val, bold) => {
+        const c = cmap[key]; if(val==='' || val==null) return;
+        const s = Pdf.fit(String(val), c.w-5, 8, !!bold);
+        p.gray(0.08);
+        if(c.al==='r') p.textR(c.x+c.w-3, ty, s, 8, !!bold);
+        else if(c.al==='c') p.textC(c.x+c.w/2, ty, s, 8, !!bold);
+        else p.text(c.x+2.5, ty, s, 8, !!bold);
+      };
+
+      // static columns, always printed
+      put('mark', t.mark, true);
+      put('loc',  t.loc);
+      put('str',  String(num(t.strands)||1));
+      put('len',  fx(num(t.len),1));
+      put('calc', fmtLen(parseLen(t.calc),r) + (t.est?' E':''));
+      put('rpsi', isFinite(C.reqPsi(r)) ? fx(C.reqPsi(r),0) : '');
+
+      if(filled){
+        // print the recorded + calculated values as fixed text
+        const st = C.status(r,t), ls = C.loStatus(r,t);
+        put('apsi', t.apsi===''?'':fx(num(t.apsi),0));
+        put('mka',  fmtLen(parseLen(t.mka),r));
+        put('mkb',  fmtLen(parseLen(t.mkb),r));
+        put('gross',fmtLen(C.gross(t),r));
+        put('seat', fmtLen(parseLen(t.seat),r));
+        put('net',  fmtLen(C.net(t),r), true);
+        const pv = C.pct(t);
+        if(isFinite(pv)){
+          const c=cmap['pct'];
+          if(st==='CHECK') p.rgb(0.639,0.196,0.173); else p.rgb(0.180,0.435,0.322);
+          p.textR(c.x+c.w-3, ty, (pv>0?'+':'')+fx(pv,1)+'%', 8, true);
+        }
+        if(st){
+          const c=cmap['st'];
+          if(st==='CHECK'){ p.rgb(0.965,0.871,0.859).fillRect(c.x+1,rowBot+1,c.w-2,rowH-2); p.rgb(0.639,0.196,0.173); }
+          else { p.rgb(0.875,0.929,0.898).fillRect(c.x+1,rowBot+1,c.w-2,rowH-2); p.rgb(0.180,0.435,0.322); }
+          p.textC(c.x+c.w/2, ty, st, 7.5, true);
+        }
+        put('lopsi', t.lopsi===''?'':fx(num(t.lopsi),0));
+        put('lof',   fx(C.loForce(r,t),2));
+        const gv = C.loGuts(r,t);
+        if(isFinite(gv)){
+          const c=cmap['loguts'];
+          if(ls!=='OK') p.rgb(0.663,0.337,0.122); else p.rgb(0.180,0.435,0.322);
+          p.textR(c.x+c.w-3, ty, fx(gv,1)+(ls==='OK'?'':' '+ls), 7.5, true);
+        }
+        put('notes', t.notes);
+      } else {
+        // live form fields
+        const fh = rowH-3, fy = rowBot+1.5;
+        const F = (key, opts) => {
+          const c = cmap[key];
+          const ref = mkField(pageRef, c.x+1, fy, c.w-2, fh, 'T'+n+'_'+key.toUpperCase(),
+            Object.assign({al:c.al, size:8}, opts||{}));
+          annots.push(ref);
+        };
+        const calcNm = fx(parseLen(t.calc),6);
+        const gutsNm = fx(C.guts(r,t),4);
+
+        const fracTip = ' Fractions are fine: 9 7/16, 9-7/16, 7/16 or 9.4375.';
+        F('apsi', {tip:'Actual gauge pressure at jacking, psi. Required: '+(isFinite(C.reqPsi(r))?fx(C.reqPsi(r),0)+' psi':'not set')});
+        F('mka',  {tip:'Reference mark before stressing, in.'+fracTip});
+        F('mkb',  {tip:'Same mark after stressing, in.'+fracTip});
+        F('gross',{ro:true, tip:'Mark B minus Mark A',
+          js:'var a=slLV(this,"T'+n+'_MKA"), b=slLV(this,"T'+n+'_MKB"); event.value=(isNaN(a)||isNaN(b))?"":slLen(b-a);'});
+        F('seat', {tip:'Seating / shim deduction, in.'+fracTip});
+        F('net',  {ro:true, tip:'Gross minus seating deduction',
+          js:'var g=slLV(this,"T'+n+'_GROSS"), s=slLV(this,"T'+n+'_SEAT"); if(isNaN(s))s=0; event.value=isNaN(g)?"":slLen(g-s);'});
+        F('pct',  {ro:true, tip:'(Net - Calculated) / Calculated, computed on exact values not the displayed fraction',
+          js:'var c='+calcNm+', m=slLV(this,"T'+n+'_NET"); if(isNaN(m)||!(c>0)){event.value="";}else{var d=(m-c)/c*100; event.value=(d>0?"+":"")+slF(d,1)+"%";}'});
+        F('st',   {ro:true, size:7.5, tip:'Within +/-'+fx(tol,1)+'% of calculated',
+          js:'var c='+calcNm+', m=slLV(this,"T'+n+'_NET");'+
+             'if(isNaN(m)||!(c>0)){event.value="";event.target.textColor=color.black;}'+
+             'else{var d=Math.abs((m-c)/c*100);'+
+             'if(d<='+fx(tol,4)+'){event.value="ACCEPT";event.target.textColor=color.green;}'+
+             'else{event.value="CHECK";event.target.textColor=color.red;}}'});
+        F('lopsi',{tip:'Gauge pressure at lift-off, psi'});
+        F('lof',  {ro:true, tip:'Lift-off force, kips = psi x ram area / 1000',
+          js:(!(ramA>0)
+              ? 'event.value="SET RAM AREA";'
+              : 'var q=slV(this,"T'+n+'_LOPSI"); event.value=isNaN(q)?"":slF(q*'+fx(ramA,5)+'/1000/(1+'+fx(calP,5)+'/100),2);')});
+        F('loguts',{ro:true, size:7.5, tip:'Lift-off force as % of GUTS. Band: '+fx(loMin,1)+'-'+fx(loMax,1)+'%',
+          js:(!(ramA>0) || !(C.guts(r,t)>0)
+              ? 'event.value="";'
+              : 'var f=slV(this,"T'+n+'_LOF"); if(isNaN(f)){event.value="";event.target.textColor=color.black;}'+
+                'else{var g=f/'+gutsNm+'*100; event.value=slF(g,1);'+
+                'if(g<'+fx(isFinite(loMin)?loMin:0,4)+'||g>'+fx(isFinite(loMax)?loMax:999,4)+'){event.target.textColor=color.red;}'+
+                'else{event.target.textColor=color.green;}}')});
+        F('notes',{al:'l', size:7.5});
+      }
+      y = rowBot;
+    }
+
+    // last-page closing blocks
+    if(isLast){
+      y -= 9;
+      const half = (L.usable-10)/2;
+
+      // ---- acceptance summary ----
+      const sumH = 82;
+      p.lw(0.7).strokeGray(0.2);
+      p.rect(L.M, y-sumH, half, sumH);
+      p.gray(0.90).fillRect(L.M, y-12, half, 12);
+      p.gray(0.15); p.text(L.M+4, y-9, 'ACCEPTANCE SUMMARY', 6.2, true);
+
+      const s = C.summary(r);
+      const N = T.length;
+      const sumCalcAll = T.reduce((a,t)=>{ const c=parseLen(t.calc); return a+(c>0?c:0); },0);
+      const CA = '['+T.map(t=>{ const c=parseLen(t.calc); return fx(c>0?c:0,6); }).join(',')+']';
+      const JS = {
+        SUM_MEAS:'var s=0;for(var i=1;i<='+N+';i++){var m=slLV(this,"T"+i+"_NET");if(!isNaN(m))s+=m;}event.value=slLen(s);',
+        GRP_PCT: 'var CA='+CA+',sc=0,sm=0;'+
+          'for(var i=1;i<='+N+';i++){var m=slLV(this,"T"+i+"_NET"),c=CA[i-1];if(!isNaN(m)&&c>0){sc+=c;sm+=m;}}'+
+          'if(sc<=0){event.value="";event.target.textColor=color.black;}else{var d=(sm-sc)/sc*100;event.value=(d>0?"+":"")+slF(d,2)+"%";'+
+          'if(Math.abs(d)>'+fx(tolG,4)+'){event.target.textColor=color.red;}else{event.target.textColor=color.green;}}',
+        N_OUT:   'var CA='+CA+',k=0;'+
+          'for(var i=1;i<='+N+';i++){var m=slLV(this,"T"+i+"_NET"),c=CA[i-1];if(!isNaN(m)&&c>0&&Math.abs((m-c)/c*100)>'+fx(tol,4)+')k++;}'+
+          'event.value=String(k);if(k>0){event.target.textColor=color.red;}else{event.target.textColor=color.green;}'
+      };
+      // the first two are known when the sheet is generated; the rest depend on field entries
+      const rowsS = [
+        ['TENDONS ON SHEET',                  String(N),        null],
+        ['SUM CALCULATED ELONGATION (IN)',    fmtLen(sumCalcAll,r), null],
+        ['SUM MEASURED ELONGATION (IN)',      fmtLen(s.sumMeas,r),  'SUM_MEAS'],
+        ['GROUP AVERAGE DIFFERENCE',          isFinite(s.grpPct)?(s.grpPct>0?'+':'')+fx(s.grpPct,2)+'%':'-', 'GRP_PCT'],
+        ['TENDONS OUTSIDE +/-'+fx(tol,1)+'%', String(s.bad),    'N_OUT']
+      ];
+      rowsS.forEach((rr,ix)=>{
+        const sy = y-24-ix*11;
+        p.gray(0.40); p.text(L.M+4, sy, rr[0], 6, true);
+        if(filled || !rr[2]){
+          p.gray(0.08); p.textR(L.M+half-4, sy, rr[1], 8.5, true);
+        } else {
+          annots.push(mkField(pageRef, L.M+half-66, sy-2.5, 62, 11, rr[2],
+            {ro:true, al:'r', size:8, js:JS[rr[2]]}));
+        }
+      });
+
+      // ---- certification block ----
+      const cx = L.M+half+10;
+      p.lw(0.7).strokeGray(0.2);
+      p.rect(cx, y-sumH, half, sumH);
+      p.gray(0.90).fillRect(cx, y-12, half, 12);
+      p.gray(0.15); p.text(cx+4, y-9, 'STRESSING RECORD - CERTIFICATION', 6.2, true);
+
+      const cw2 = (half-12)/2;
+      const certs = [
+        ['DATE STRESSED','DATE', r.dateStressed],
+        ['STRESSED BY (PRINT)','BY', r.stressedBy],
+        ['CONCRETE STRENGTH AT STRESSING (PSI)','FCI', r.fciActual],
+        ['CYLINDER / TEST REPORT NO.','CYL', r.cylNo],
+        ['WITNESSED BY / INSPECTOR','WIT', r.witnessedBy],
+        ['JC CONCRETE SUPERINTENDENT','SUP', r.superintendent]
+      ];
+      certs.forEach((c,ix)=>{
+        const col = ix%2, row2 = Math.floor(ix/2);
+        const bx = cx+4+col*(cw2+4), by = y-24-row2*18;
+        p.gray(0.40); p.text(bx, by+4, c[0], 5.2, true);
+        if(filled){
+          p.lw(0.4).strokeGray(0.6); p.line(bx, by-6, bx+cw2, by-6);
+          p.gray(0.08); p.text(bx+1, by-4.5, Pdf.fit(c[2]||'', cw2-2, 8, false), 8, false);
+        } else {
+          annots.push(mkField(pageRef, bx, by-7.5, cw2, 11, 'CERT_'+c[1], {al:'l', size:8,
+            tip:(c[1]==='FCI' && num(r.fciReq)>0) ? ('Required f\'ci is '+fx(num(r.fciReq),0)+' psi. Do not stress below it.') : ''}));
+        }
+      });
+      if(num(r.fciReq)>0){
+        const req = num(r.fciReq);
+        if(!filled){
+          annots.push(mkField(pageRef, cx+4, y-sumH+3.5, half-8, 10, 'FCI_GATE', {ro:true, al:'l', size:7,
+            js:'var v=slV(this,"CERT_FCI"); if(isNaN(v)){event.value="";event.target.textColor=color.black;}'+
+               'else if(v<'+fx(req,2)+'){event.value="HOLD - BELOW REQUIRED f\'ci OF '+fx(req,0)+' PSI. DO NOT STRESS.";event.target.textColor=color.red;}'+
+               'else{event.value="f\'ci VERIFIED - '+fx(req,0)+' PSI REQUIRED";event.target.textColor=color.green;}'}));
+        } else {
+          const act = num(r.fciActual);
+          let msg = 'REQUIRED f\'ci ' + fx(req,0) + ' PSI - BREAK NOT RECORDED';
+          if(isFinite(act)){
+            if(act < req){ p.rgb(0.639,0.196,0.173); msg = 'HOLD - '+fx(act,0)+' PSI IS BELOW THE REQUIRED '+fx(req,0)+' PSI'; }
+            else { p.rgb(0.180,0.435,0.322); msg = 'f\'ci VERIFIED - '+fx(act,0)+' PSI vs '+fx(req,0)+' PSI REQUIRED'; }
+          } else p.gray(0.45);
+          p.text(cx+5, y-sumH+6, msg, 6.6, true);
+        }
+      }
+
+      y -= sumH + 8;
+    }
+
+    y = drawFooter(p, L, r, y-4);
+
+    const cs = doc.stream('', p.out());
+    doc.put(pageRef,
+      '<< /Type /Page /Parent '+pagesRef+' 0 R /MediaBox [0 0 '+L.W+' '+L.H+'] /Rotate 0 '+
+      '/Resources '+resDict+' /Contents '+cs+' 0 R'+
+      (annots.length ? ' /Annots ['+annots.map(a=>a+' 0 R').join(' ')+']' : '')+' >>');
+  });
+
+  doc.put(pagesRef, '<< /Type /Pages /Kids ['+pageRefs.map(p=>p+' 0 R').join(' ')+'] /Count '+pageRefs.length+' >>');
+
+  const acroBody = filled
+    ? '<< /Fields [] >>'
+    : '<< /Fields ['+fields.map(f=>f+' 0 R').join(' ')+'] /NeedAppearances true '+
+      '/DA (/Helv 8 Tf 0 g) /DR '+resDict+' /CO ['+order.map(f=>f+' 0 R').join(' ')+'] >>';
+  doc.put(acro, acroBody);
+
+  const title = [r.job||'PT Elongation Record', r.bldg, r.pour].filter(Boolean).join(' - ');
+  const info = doc.add('<< /Title ('+Pdf.s(title)+') /Author (JC Concrete, LLC) '+
+    '/Subject (Tendon elongation and lift-off record) /Creator (Strandline) >>');
+
+  doc.put(catalog,
+    '<< /Type /Catalog /Pages '+pagesRef+' 0 R /AcroForm '+acro+' 0 R'+
+    (filled ? '' : ' /Names << /JavaScript << /Names [(SLUtil) '+docJs+' 0 R] >> >>')+
+    ' /ViewerPreferences << /DisplayDocTitle true >> >>');
+
+  return doc.build(info);
+}
+
+/* ============================================================
+   4. file delivery
+   ============================================================ */
+function pdfName(r, filled){
+  return [slug(r.jobNo||r.job||'job'), slug(r.bldg||''), slug(r.pour||''),
+          filled?'ELONG-RECORD':'ELONG-FIELD-SHEET'].filter(Boolean).join('_')+'.pdf';
+}
+function blobDownload(bytes, name, mime){
+  const blob = new Blob([bytes], {type: mime||'application/pdf'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+}
+
+// When the app runs as a hosted page, plain download links are inert and the host
+// mediates saves instead. Resolve that once and reuse it.
+let DL;
+async function downloadsApi(){
+  if(DL === undefined){
+    DL = null;
+    try{
+      if(window.claude && typeof window.claude.use === 'function') DL = await window.claude.use('downloads');
+    }catch(e){ DL = null; }
+  }
+  return DL;
+}
+async function deliver(bytes, name, mime){
+  const d = await downloadsApi();
+  if(d){
+    try{
+      await d.save({filename:name, data:bytes.slice(0)});
+      toast('Saved — '+name);
+      return true;
+    }catch(e){
+      switch((e && e.code) || 'unavailable'){
+        case 'declined':      toast('Save cancelled'); return false;
+        case 'rate_limited':  toast('A save prompt is already open — finish that one first'); return false;
+        case 'too_large':     toast('Over the 16 MB limit — split the pour into two records'); return false;
+        case 'extension_not_enabled':
+          toast('This viewer will not save '+(name.split('.').pop()||'that')+' files — see Backup & transfer');
+          return false;
+        case 'bad_request':
+        case 'transform_error':
+          toast('Could not build that file — check the record for stray characters');
+          return false;
+        default: break;   // unavailable / lifecycle: try the plain path
+      }
+    }
+  }
+  blobDownload(bytes, name, mime);
+  return true;
+}
+async function shareFile(bytes, name, subject, body){
+  if(!(navigator.canShare && navigator.share)) return false;
+  const file = new File([bytes], name, {type:'application/pdf'});
+  if(!navigator.canShare({files:[file]})) return false;
+  try{
+    await navigator.share({files:[file], title:subject, text:body});
+    return true;
+  }catch(e){
+    // AbortError = the person closed the share sheet; that is a completed interaction
+    return !!(e && e.name === 'AbortError');
+  }
+}
+
+/* ============================================================
+   5. PDF text extraction from the uploaded plan
+   ============================================================ */
+async function inflate(bytes){
+  if(typeof DecompressionStream === 'undefined') return null;
+  for(const fmt of ['deflate','deflate-raw']){
+    try{
+      const ds = new DecompressionStream(fmt);
+      const w = ds.writable.getWriter();
+      w.write(bytes); w.close();
+      const buf = await new Response(ds.readable).arrayBuffer();
+      return new Uint8Array(buf);
+    }catch(e){ /* try the next wrapping */ }
+  }
+  return null;
+}
+function latin1(bytes){
+  let s='';
+  const CH=0x8000;
+  for(let i=0;i<bytes.length;i+=CH) s += String.fromCharCode.apply(null, bytes.subarray(i, i+CH));
+  return s;
+}
+function pdfStringsFrom(content){
+  const out=[];
+  // (literal) Tj   and   [ (a) 1 (b) ] TJ
+  const re = /\((?:\\.|[^\\()])*\)|<[0-9A-Fa-f\s]+>/g;
+  const opRe = /(\[[\s\S]*?\]\s*TJ)|(\((?:\\.|[^\\()])*\)\s*(?:Tj|'|"))/g;
+  let m;
+  while((m = opRe.exec(content))){
+    const chunk = m[0];
+    let piece = '', s2;
+    re.lastIndex = 0;
+    while((s2 = re.exec(chunk))){
+      let v = s2[0];
+      if(v[0]==='('){
+        v = v.slice(1,-1)
+             .replace(/\\([nrtbf()\\])/g, (x,c)=>({n:'\n',r:'',t:' ',b:'',f:''}[c] !== undefined ? {n:'\n',r:'',t:' ',b:'',f:''}[c] : c))
+             .replace(/\\([0-7]{1,3})/g, (x,o)=>String.fromCharCode(parseInt(o,8)));
+      } else {
+        const hex = v.slice(1,-1).replace(/\s+/g,'');
+        let t='';
+        // PDF hex strings in CID fonts are usually 2-byte; try both and keep printable
+        for(let i=0;i<hex.length;i+=2) t += String.fromCharCode(parseInt(hex.substr(i,2),16)||32);
+        v = t;
+      }
+      piece += v;
+    }
+    piece = piece.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'').trim();
+    if(piece) out.push(piece);
+  }
+  return out;
+}
+async function extractPlanText(buf){
+  const bytes = new Uint8Array(buf);
+  const raw = latin1(bytes);
+  const pageCount = (raw.match(/\/Type\s*\/Page[^s]/g)||[]).length;
+  const chunks=[];
+  const re = /stream\r?\n?/g;
+  let m, guard=0;
+  while((m = re.exec(raw)) && guard++ < 4000){
+    const start = m.index + m[0].length;
+    const end = raw.indexOf('endstream', start);
+    if(end < 0) continue;
+    const head = raw.slice(Math.max(0, m.index-600), m.index);
+    const seg = bytes.subarray(start, end);
+    if(seg.length < 6 || seg.length > 12*1024*1024) continue;
+    let content = null;
+    if(/\/FlateDecode/.test(head)){
+      const inf = await inflate(seg);
+      if(inf) content = latin1(inf);
+    } else if(!/\/DCTDecode|\/JPXDecode|\/CCITTFaxDecode|\/JBIG2Decode|\/RunLengthDecode|\/LZWDecode/.test(head)){
+      content = latin1(seg);
+    }
+    if(content && /(Tj|TJ)/.test(content)) chunks.push(content);
+    re.lastIndex = end;
+  }
+  const tokens = [];
+  for(const c of chunks) for(const s of pdfStringsFrom(c)) tokens.push(s);
+  return {pageCount, tokens};
+}
+
+// A letter prefix is required. Bare numbers on a PT drawing are overwhelmingly
+// dimensions, elevations and detail bubbles, and including them buries the real marks.
+const MARK_RE = /^[A-Z]{1,3}-?\d{1,3}[A-Z]?$/;
+const MARK_STOP = new Set(['NO','TYP','EA','FT','IN','KSI','PSI','SF','LF','CY','EL','REV','SHT','DWG','ACI','PTI','ASTM']);
+function candidateMarks(tokens){
+  const counts = new Map();
+  for(const raw of tokens){
+    for(const piece of raw.split(/[\s,;|()]+/)){
+      const t = piece.trim().toUpperCase().replace(/[^A-Z0-9\-]/g,'');
+      if(t.length < 2 || t.length > 7) continue;
+      if(!MARK_RE.test(t)) continue;
+      if(MARK_STOP.has(t.replace(/[-\d]/g,''))) continue;
+      counts.set(t, (counts.get(t)||0)+1);
+    }
+  }
+  return Array.from(counts.entries())
+    .sort((a,b)=> a[0].localeCompare(b[0], undefined, {numeric:true}))
+    .slice(0, 400);
+}
+
+/* ============================================================
+   6. UI
+   ============================================================ */
+let plan = null;   // {name,size,pageCount,tokens,cands,url}
+let panel = 'setup';
+
+function go(p){
+  panel = p;
+  $$('.panel').forEach(el=>el.classList.toggle('on', el.id==='p-'+p));
+  $$('#rail button').forEach(b=>b.setAttribute('aria-current', String(b.dataset.p===p)));
+  if(p==='tendons') renderTendons();
+  if(p==='review') renderReview();
+  if(p==='export') { buildMail(); renderShareNote(); }
+  window.scrollTo({top:0, behavior:'instant'});
+}
+
+/* ---------- titleblock ---------- */
+function renderTitleblock(){
+  const r = rec();
+  const cells = [
+    ['Job', r.job], ['Job no.', r.jobNo], ['Building', r.bldg], ['Slab / pour', r.pour],
+    ['Strand', r.dia==='custom' ? (fx(C.aps(r),3)+' in²') : (r.dia+'" × '+fx(C.fpu(r),0)+' ksi')],
+    ['Pj / strand', isFinite(C.pjStrand(r)) ? fx(C.pjStrand(r),2)+' k' : ''],
+    ['Req. gauge', isFinite(C.reqPsi(r)) ? fx(C.reqPsi(r),0)+' psi' : ''],
+    ['Tendons', String(r.tendons.length)]
+  ];
+  $('#tbCells').innerHTML = cells.map(([k,v])=>
+    '<div class="tb-cell"><span class="k">'+esc(k)+'</span><span class="v'+(v?'':' empty')+'">'+esc(v||'—')+'</span></div>'
+  ).join('');
+}
+
+/* ---------- setup ---------- */
+function bindSetup(){
+  $$('[data-s]').forEach(el=>{
+    el.addEventListener('input', ()=>{
+      const r = rec(), k = el.dataset.s;
+      r[k] = el.value;
+      if(k==='dia' && APS_BY_DIA[el.value]) { r.aps = APS_BY_DIA[el.value]; fillSetup(); }
+      if(k==='recName') renderProjSel();
+      save(); renderTitleblock(); renderPjNote();
+      if(panel==='tendons') renderTendons();
+    });
+  });
+}
+function fillSetup(){
+  const r = rec();
+  $$('[data-s]').forEach(el=>{ const v = r[el.dataset.s]; el.value = (v==null?'':v); });
+  renderPjNote();
+}
+function renderPjNote(){
+  const r = rec();
+  const pj = C.pjStrand(r), rq = C.reqPsi(r);
+  const bits = [];
+  if(isFinite(pj)) bits.push('<strong>P<sub>j</sub> = '+fx(pj,2)+' kips per strand</strong> ('+fx(C.jack(r),0)+'% × '+fx(C.fpu(r),0)+' ksi × '+fx(C.aps(r),3)+' in²)');
+  if(isFinite(rq)) bits.push('<strong>Required gauge pressure = '+fx(rq,0)+' psi</strong>');
+  let cls='note', html;
+  if(!isFinite(rq)){
+    cls='note stop';
+    html = (bits.length?bits.join(' &nbsp;&middot;&nbsp; ')+'<br>':'')+
+      'Ram effective area is not set, so required gauge pressure and lift-off force cannot be calculated. The sheet will print '+
+      '<em>SEE NOTE</em> in place of a pressure. Get the value from the current jack and gauge calibration certificate for the '+
+      'actual equipment going to this job — not a catalog area, and not last year’s cert.';
+  } else {
+    html = bits.join(' &nbsp;&middot;&nbsp; ')+
+      '<br>Gauge pressure includes the '+fx(C.cal(r),1)+'% correction entered above. Confirm the calibration is current '+
+      '(most specs require it within 6 months, and require the certificate as a submittal) before the crew stresses anything.';
+  }
+  const el = $('#pjNote'); el.className = cls; el.innerHTML = html;
+  renderFciNote();
+  renderResNote();
+}
+// What the tape's own resolution costs you out of the acceptance band.
+function renderResNote(){
+  const r = rec(), el = $('#resNote');
+  if(!el) return;
+  if(r.lenMode === 'dec'){
+    el.className = 'note';
+    el.innerHTML = 'Showing decimal inches to three places. Reading resolution still depends on the tape, '+
+      'not on the display &mdash; set the fraction precision to whatever the crew actually reads.';
+    return;
+  }
+  const den = num(r.den)||16;
+  const tol = num(r.tolInd)||7;
+  const calcs = r.tendons.map(t=>parseLen(t.calc)).filter(v=>v>0);
+  const avg = calcs.length ? calcs.reduce((a,b)=>a+b,0)/calcs.length : NaN;
+  // net elongation is three reads (mark A, mark B, seating), each +/- half a division
+  const band = 1.5/den;
+  if(!isFinite(avg)){
+    el.className = 'note';
+    el.innerHTML = 'Reading to the nearest 1/'+den+' puts up to <strong>&plusmn;'+fmtFrac(band,64)+' in</strong> of '+
+      'measurement scatter into net elongation (mark A, mark B and the seating deduction are three separate reads). '+
+      'Add tendons with calculated elongations and this shows what that costs against your tolerance.';
+    return;
+  }
+  const pct = band/avg*100;
+  const share = pct/tol*100;
+  const hot = share > 30;
+  el.className = hot ? 'note rfi' : 'note';
+  el.innerHTML = 'Reading to the nearest 1/'+den+' puts up to <strong>&plusmn;'+fmtFrac(band,64)+' in</strong> '+
+    '('+fx(pct,2)+'%) of measurement scatter into net elongation &mdash; mark A, mark B and the seating deduction are '+
+    'three separate reads. On an average calculated elongation of '+fmtLen(avg,r)+' in that consumes about '+
+    '<strong>'+fx(share,0)+'% of your &plusmn;'+fx(tol,1)+'% band</strong> before the tendon itself does anything.'+
+    (hot ? ' That is a large share. Read to a finer division, or expect borderline tendons to be arguments you cannot win with this sheet.' : '');
+}
+function renderFciNote(){
+  const r = rec(), el = $('#fciNote');
+  if(!el) return;
+  const req = num(r.fciReq), act = num(r.fciActual);
+  if(!isFinite(act)){
+    el.className='note';
+    el.innerHTML = isFinite(req)
+      ? 'Required f&prime;<sub>ci</sub> is <strong>'+fx(req,0)+' psi</strong>. Enter the actual break and this checks it.'
+      : 'No required f&prime;<sub>ci</sub> entered in <em>Strand &amp; jacking</em>, so there is nothing to check the break against.';
+    return;
+  }
+  if(!isFinite(req)){
+    el.className='note rfi';
+    el.innerHTML = '<strong>'+fx(act,0)+' psi recorded with no required f&prime;<sub>ci</sub> to check it against.</strong> '+
+      'Enter the required strength from the structural drawings or the PT shop drawing — a record with a break but no criterion proves nothing.';
+    return;
+  }
+  if(act < req){
+    el.className='note stop';
+    el.innerHTML = '<strong>HOLD — '+fx(act,0)+' psi is below the required '+fx(req,0)+' psi.</strong> Do not stress. '+
+      'Notify the GC and the EOR in writing, and log the hold as a delay the day it happens. If someone directs you to stress anyway, '+
+      'get that direction in writing before the jack goes on the strand.';
+  } else {
+    el.className='note ok';
+    el.innerHTML = '<strong>f&prime;<sub>ci</sub> verified</strong> — '+fx(act,0)+' psi against '+fx(req,0)+' psi required'+
+      (r.cylNo?' (report '+esc(r.cylNo)+')':'')+'.';
+  }
+}
+
+/* ---------- project selector ---------- */
+function renderProjSel(){
+  const sel = $('#projSel');
+  sel.innerHTML = DB.records.map(r=>
+    '<option value="'+esc(r.id)+'"'+(r.id===DB.active?' selected':'')+'>'+
+    esc(r.recName||'Untitled')+(r.bldg?' — '+esc(r.bldg):'')+'</option>'
+  ).join('');
+}
+
+/* ---------- tendon grid ---------- */
+function isNarrow(){ return window.matchMedia('(max-width: 900px)').matches; }
+
+function renderStats(){
+  const r = rec(), s = C.summary(r);
+  const cells = [
+    ['Tendons', String(s.count), ''],
+    ['Recorded', s.count?s.entered+'<span class="u"> / '+s.count+'</span>':'0', ''],
+    ['Sum calc.', fmtLenO(s.sumCalc,r), 'in'],
+    ['Sum measured', fmtLenO(s.sumMeas,r), 'in'],
+    ['Group avg diff', isFinite(s.grpPct)?((s.grpPct>0?'+':'')+fx(s.grpPct,2)+'%'):'—', '',
+      s.grpOk===null?'':(s.grpOk?'good':'flag')],
+    ['Outside ±'+fx(num(r.tolInd),1)+'%', String(s.bad), '', s.bad>0?'flag':(s.paired?'good':'')],
+    ['Lift-off flags', s.loN?String(s.loBad):'—', '', s.loBad>0?'flag':(s.loN?'good':'')]
+  ];
+  $('#tStats').innerHTML = cells.map(c=>
+    '<div class="stat'+(c[3]?' '+c[3]:'')+'"><span class="k">'+esc(c[0])+'</span>'+
+    '<span class="v">'+c[1]+(c[2]?'<span class="u"> '+c[2]+'</span>':'')+'</span></div>'
+  ).join('');
+}
+
+function cellStatus(r,t){
+  const st = C.status(r,t);
+  if(!st) return '<span class="pill idle">—</span>';
+  return '<span class="pill '+(st==='ACCEPT'?'ok':'bad')+'">'+st+'</span>';
+}
+function cellLo(r,t){
+  const ls = C.loStatus(r,t);
+  if(!ls) return '';
+  return '<span class="pill '+(ls==='OK'?'ok':'warn')+'">'+ls+'</span>';
+}
+
+function renderTendons(){
+  renderStats();
+  const r = rec();
+  $('#viewHint').textContent = isNarrow()
+    ? 'Card view — one tendon at a time. Rotate to landscape or use a computer for the table.'
+    : 'Shaded fields are field entries. Grey columns calculate.';
+
+  const estCount = r.tendons.filter(t=>t.est).length;
+  const en = $('#estNote');
+  if(estCount){
+    en.style.display='';
+    en.innerHTML = '<strong>'+estCount+' calculated elongation'+(estCount===1?'':'s')+' '+
+      (estCount===1?'is':'are')+' an estimate, not a shop-drawing value.</strong> The estimate is '+
+      'Δ = 12 P<sub>j</sub> L / (A<sub>ps</sub> E<sub>ps</sub>) with a '+fx(num(r.frictionPct)||0,1)+'% friction allowance. '+
+      'It ignores curvature, wobble, and actual anchor set, so it will not match the supplier’s number. '+
+      'Estimated rows print with an <em>E</em> flag. Replace them with the shop-drawing values before this sheet becomes a submittal — '+
+      'if the schedule does not show elongations, that is an RFI to the PT supplier, not a number to invent.';
+  } else en.style.display='none';
+
+  $('#tendonHost').innerHTML = isNarrow() ? cardsHtml(r) : tableHtml(r);
+  bindTendonInputs();
+}
+
+// Fraction entry needs the "/" key, so a decimal keypad is the wrong keyboard on iOS.
+function lenAttrs(r){
+  return r.lenMode === 'dec'
+    ? 'inputmode="decimal" data-len="1"'
+    : 'inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false" data-len="1"';
+}
+
+function tableHtml(r){
+  const T = r.tendons;
+  if(!T.length) return '<div class="note">No tendons yet. Add them on the <strong>PT Plans</strong> tab (bulk range or paste the schedule), or press <strong>+ Add tendon</strong>.</div>';
+  const rq = C.reqPsi(r);
+  const LA = lenAttrs(r);
+  let h = '<div class="tablewrap"><table class="tt"><thead>'+
+    '<tr class="grp"><th colspan="7"><span class="grpband">FROM SHOP DRAWING</span></th>'+
+    '<th colspan="8"><span class="grpband">RECORDED IN FIELD / CALCULATED</span></th>'+
+    '<th colspan="3"><span class="grpband">LIFT-OFF VERIFICATION</span></th>'+
+    '<th colspan="2"><span class="grpband"></span></th></tr>'+
+    '<tr class="hdr">'+
+    '<th>#</th><th>Tendon<span class="sub">mark</span></th><th>Grid /<span class="sub">location</span></th>'+
+    '<th>S<span class="sub">str</span></th><th>Length<span class="sub">ft</span></th>'+
+    '<th>Calc elong<span class="sub">in &middot; shop dwg</span></th><th>Req gauge<span class="sub">psi</span></th>'+
+    '<th>Act gauge<span class="sub">psi</span></th><th>Mark A<span class="sub">in</span></th><th>Mark B<span class="sub">in</span></th>'+
+    '<th>Gross<span class="sub">in</span></th><th>Seat<span class="sub">in</span></th><th>Net elong<span class="sub">in</span></th>'+
+    '<th>% diff</th><th>Status</th>'+
+    '<th>L/O gauge<span class="sub">psi</span></th><th>L/O force<span class="sub">kips</span></th><th>% GUTS</th>'+
+    '<th>Notes</th><th></th></tr></thead><tbody>';
+
+  T.forEach((t,i)=>{
+    const ip = (k,extra) => '<input data-t="'+i+'" data-k="'+k+'" value="'+esc(t[k])+'" '+(extra||'')+'>';
+    h += '<tr>'+
+      '<td class="rownum">'+(i+1)+'</td>'+
+      '<td style="min-width:74px">'+ip('mark')+'</td>'+
+      '<td style="min-width:82px">'+ip('loc')+'</td>'+
+      '<td style="width:42px">'+ip('strands','inputmode="numeric"')+'</td>'+
+      '<td style="width:70px">'+ip('len','inputmode="decimal"')+'</td>'+
+      '<td style="width:92px"><div class="calccell">'+ip('calc',LA)+
+        (t.est?'<span class="estchip" title="Estimated — not a shop-drawing value">E</span>':'')+'</div></td>'+
+      '<td class="calc" id="c_rpsi_'+i+'">'+fxo(rq,0)+'</td>'+
+      '<td style="width:62px">'+ip('apsi','inputmode="decimal" class="entry"')+'</td>'+
+      '<td style="width:68px">'+ip('mka',LA+' class="entry"')+'</td>'+
+      '<td style="width:68px">'+ip('mkb',LA+' class="entry"')+'</td>'+
+      '<td class="calc" id="c_gross_'+i+'"></td>'+
+      '<td style="width:66px">'+ip('seat',LA+' class="entry"')+'</td>'+
+      '<td class="calc" id="c_net_'+i+'"></td>'+
+      '<td class="calc" id="c_pct_'+i+'"></td>'+
+      '<td class="stat-c" id="c_st_'+i+'"></td>'+
+      '<td style="width:62px">'+ip('lopsi','inputmode="decimal" class="entry"')+'</td>'+
+      '<td class="calc" id="c_lof_'+i+'"></td>'+
+      '<td class="calc" id="c_guts_'+i+'"></td>'+
+      '<td style="min-width:120px">'+ip('notes','class="entry"')+'</td>'+
+      '<td class="act"><button class="xbtn" data-del="'+i+'" title="Delete tendon '+esc(t.mark||(i+1))+'">×</button></td>'+
+      '</tr>';
+  });
+  return h + '</tbody></table></div>';
+}
+
+function cardsHtml(r){
+  const T = r.tendons;
+  if(!T.length) return '<div class="note">No tendons yet. Add them on the <strong>PT Plans</strong> tab, or press <strong>+ Add tendon</strong>.</div>';
+  const rq = C.reqPsi(r);
+  const LA = lenAttrs(r);
+  const U = r.lenMode === 'dec' ? 'in' : 'in — fractions ok';
+  let h = '<div class="tcards">';
+  T.forEach((t,i)=>{
+    const ip = (k,lbl,extra) => '<label class="f"><span>'+lbl+'</span><input data-t="'+i+'" data-k="'+k+'" value="'+esc(t[k])+'" '+(extra||'')+'></label>';
+    h += '<div class="tcard">'+
+      '<div class="top"><span class="idx">'+(i+1)+'</span><span class="mk">'+esc(t.mark||'—')+'</span>'+
+        '<span style="font-size:12px;color:var(--ink-3)">'+esc(t.loc||'')+'</span><span class="sp"></span>'+
+        '<span id="c_st_'+i+'"></span>'+
+        '<button class="xbtn" data-del="'+i+'" title="Delete">×</button></div>'+
+
+      '<div class="sect"><span class="lbl">From shop drawing</span>'+
+        '<div class="grid g3">'+ip('mark','Mark')+ip('loc','Grid / location')+
+        ip('strands','Strands','inputmode="numeric"')+ip('len','Length (ft)','inputmode="decimal"')+
+        ip('calc','Calc elong ('+U+')'+(t.est?' — EST':''),LA)+'</div>'+
+        '<div class="readout" style="margin-top:9px"><div><span class="k">Req gauge</span><span class="v">'+fxo(rq,0)+'</span></div>'+
+        '<div><span class="k">Pj tendon</span><span class="v">'+fxo(C.pjTendon(r,t),1)+'</span></div></div>'+
+      '</div>'+
+
+      '<div class="sect"><span class="lbl">Visual elongation — field entry</span>'+
+        '<div class="grid g3">'+ip('apsi','Act gauge (psi)','inputmode="decimal" class="entry"')+
+        ip('mka','Mark A ('+U+')',LA+' class="entry"')+
+        ip('mkb','Mark B ('+U+')',LA+' class="entry"')+
+        ip('seat','Seat / shim ('+U+')',LA+' class="entry"')+'</div>'+
+        '<div class="readout" style="margin-top:9px">'+
+        '<div><span class="k">Gross</span><span class="v" id="c_gross_'+i+'"></span></div>'+
+        '<div><span class="k">Net elong</span><span class="v" id="c_net_'+i+'"></span></div>'+
+        '<div><span class="k">% diff</span><span class="v" id="c_pct_'+i+'"></span></div></div>'+
+      '</div>'+
+
+      '<div class="sect"><span class="lbl">Lift-off verification</span>'+
+        '<div class="grid g3">'+ip('lopsi','L/O gauge (psi)','inputmode="decimal" class="entry"')+'</div>'+
+        '<div class="readout" style="margin-top:9px">'+
+        '<div><span class="k">L/O force (k)</span><span class="v" id="c_lof_'+i+'"></span></div>'+
+        '<div><span class="k">% GUTS</span><span class="v" id="c_guts_'+i+'"></span></div></div>'+
+      '</div>'+
+
+      '<div class="sect">'+ip('notes','Notes','class="entry"')+'</div>'+
+    '</div>';
+  });
+  return h+'</div>';
+}
+
+function recompute(i){
+  const r = rec(), t = r.tendons[i];
+  if(!t) return;
+  const set = (id, html) => { const el = document.getElementById(id); if(el) el.innerHTML = html; };
+  const g = C.gross(t), n = C.net(t), p = C.pct(t);
+  set('c_gross_'+i, fmtLenO(g,r));
+  set('c_net_'+i,   fmtLenO(n,r));
+  set('c_pct_'+i,   isFinite(p) ? '<span style="color:'+(Math.abs(p)<=(num(r.tolInd)||7)?'var(--ok)':'var(--bad)')+'">'+(p>0?'+':'')+fx(p,1)+'%</span>' : '—');
+  set('c_st_'+i,    cellStatus(r,t));
+  set('c_lof_'+i,   fxo(C.loForce(r,t),2));
+  const gv = C.loGuts(r,t), ls = C.loStatus(r,t);
+  set('c_guts_'+i,  isFinite(gv) ? '<span style="color:'+(ls==='OK'?'var(--ok)':'var(--warn)')+'">'+fx(gv,1)+'</span> '+cellLo(r,t) : '—');
+  const rq = C.reqPsi(r);
+  set('c_rpsi_'+i, fxo(rq,0));
+}
+function recomputeAll(){ rec().tendons.forEach((t,i)=>recompute(i)); renderStats(); renderTitleblock(); }
+
+function bindTendonInputs(){
+  $$('#tendonHost input').forEach(el=>{
+    el.addEventListener('input', ()=>{
+      const r = rec(), i = +el.dataset.t, k = el.dataset.k, t = r.tendons[i];
+      if(!t) return;
+      t[k] = el.value;
+      if(k==='calc') t.est = false;
+      if(el.dataset.len) el.classList.toggle('bad', el.value.trim()!=='' && !isFinite(parseLen(el.value)));
+      recompute(i);
+      renderStats();
+      if(k==='mark'||k==='strands'){ renderTitleblock(); }
+      save();
+    });
+    // On blur, echo back what was understood - but only when the rewrite is lossless,
+    // so a shop-drawing value like 9.19 is never quietly rounded to 9-3/16.
+    if(el.dataset.len) el.addEventListener('change', ()=>{
+      const r = rec(), i = +el.dataset.t, k = el.dataset.k, t = r.tendons[i];
+      if(!t || el.value.trim()==='') return;
+      const v = parseLen(el.value);
+      if(!isFinite(v)) return;
+      const den = num(r.den)||16;
+      const canon = (r.lenMode==='dec' || exactAt(v,den)) ? fmtLen(v,r) : null;
+      if(canon !== null && canon !== el.value){
+        el.value = canon; t[k] = canon;
+        recompute(i); renderStats(); save();
+      }
+    });
+  });
+  $$('#tendonHost [data-del]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const r = rec(), i = +b.dataset.del, t = r.tendons[i];
+      if(!confirm('Delete tendon '+(t.mark||('#'+(i+1)))+'? This cannot be undone.')) return;
+      r.tendons.splice(i,1); save(); renderTendons();
+    });
+  });
+  recomputeAll();
+}
+
+/* ---------- review ---------- */
+function renderReview(){
+  const r = rec(), s = C.summary(r), T = r.tendons;
+  const H = [];
+
+  // gates that stop the sheet from being usable
+  const stops = [];
+  if(!T.length) stops.push('No tendons in the record.');
+  if(!(C.ram(r)>0)) stops.push('Ram effective area is blank — required gauge pressure and lift-off force cannot be calculated.');
+  if(!isFinite(C.aps(r))||!isFinite(C.fpu(r))||!isFinite(C.eps(r))) stops.push('Strand properties (A<sub>ps</sub>, f<sub>pu</sub>, E<sub>ps</sub>) are incomplete.');
+  if(!r.shopDwg) stops.push('PT shop drawing number, revision and date are blank — the record will not be traceable to a drawing revision.');
+  if(!num(r.fciReq)) stops.push('Required f′<sub>ci</sub> at stressing is blank — the sheet has no strength gate on it.');
+  if(!r.calDate && !r.calExp) stops.push('No jack/gauge calibration date — most specs require a current certificate as a submittal.');
+
+  const noCalc = T.filter(t=>!(parseLen(t.calc)>0)).length;
+  const estN   = T.filter(t=>t.est).length;
+  const noLen  = T.filter(t=>!(num(t.len)>0)).length;
+
+  H.push('<div class="card"><h3>Before it goes to the field</h3><div class="body">');
+  if(stops.length){
+    H.push('<div class="note stop"><strong>'+stops.length+' item'+(stops.length===1?'':'s')+' to close out first.</strong><ul>'+
+      stops.map(x=>'<li>'+x+'</li>').join('')+'</ul></div>');
+  } else {
+    H.push('<div class="note ok"><strong>Setup is complete.</strong> Strand properties, ram calibration, shop drawing reference and the strength gate are all populated.</div>');
+  }
+  const dataFlags = [];
+  if(noCalc) dataFlags.push(noCalc+' tendon'+(noCalc===1?'':'s')+' with no calculated elongation — % difference cannot be evaluated on '+(noCalc===1?'it':'them')+'.');
+  if(estN)   dataFlags.push(estN+' tendon'+(estN===1?'':'s')+' carrying an <em>estimated</em> elongation instead of a shop-drawing value.');
+  if(noLen)  dataFlags.push(noLen+' tendon'+(noLen===1?'':'s')+' with no length.');
+  if(dataFlags.length) H.push('<div class="note rfi"><strong>Schedule data gaps.</strong><ul>'+dataFlags.map(x=>'<li>'+x+'</li>').join('')+'</ul>'+
+    'Every one of these is a question for the PT supplier or the EOR. Fill them from the shop drawing — or send the RFI. Do not let a blank become an accepted number.</div>');
+  H.push('</div></div>');
+
+  // results
+  H.push('<div class="card"><h3>Results</h3><div class="body">');
+  if(!s.entered){
+    H.push('<div class="note">Nothing recorded yet. Results populate as the crew enters marks — either here, or in the completed PDF you build from their field sheet.</div>');
+  } else {
+    H.push('<table class="simple"><tbody>'+
+      row('Tendons recorded', s.entered+' of '+s.count)+
+      row('Sum of calculated elongation', fmtLen(s.sumCalc,r)+' in')+
+      row('Sum of measured elongation', fmtLen(s.sumMeas,r)+' in')+
+      row('Group average difference', isFinite(s.grpPct)?((s.grpPct>0?'+':'')+fx(s.grpPct,2)+'% (limit ±'+fx(num(r.tolGrp),1)+'%)'):'—')+
+      row('Individual tendons outside ±'+fx(num(r.tolInd),1)+'%', String(s.bad))+
+      row('Lift-off readings outside '+fx(num(r.loMin),0)+'–'+fx(num(r.loMax),0)+'% GUTS', s.loN?(s.loBad+' of '+s.loN):'—')+
+      '</tbody></table>');
+
+    const out = T.map((t,i)=>({t,i,p:C.pct(t),st:C.status(r,t)})).filter(x=>x.st==='CHECK');
+    if(out.length){
+      H.push('<div class="note stop" style="margin-top:14px"><strong>'+out.length+' tendon'+(out.length===1?'':'s')+' outside the individual tolerance.</strong> '+
+        'This is a hold, not a rejection, and it is not a field decision. Notify the PT supplier and the EOR in writing the same day, '+
+        'photograph the anchor and the strand tail, and keep the jack and gauge on the job until it is resolved — if the gauge goes '+
+        'back to the shop, the investigation loses its best evidence.<ul>'+
+        out.map(x=>'<li><strong>'+esc(x.t.mark||('#'+(x.i+1)))+'</strong>'+(x.t.loc?' ('+esc(x.t.loc)+')':'')+
+          ' — calc '+fmtLen(parseLen(x.t.calc),r)+' in, measured '+fmtLen(C.net(x.t),r)+' in, '+
+          (x.p>0?'+':'')+fx(x.p,1)+'%</li>').join('')+'</ul></div>');
+    } else if(s.paired){
+      H.push('<div class="note ok" style="margin-top:14px"><strong>All recorded tendons are within ±'+fx(num(r.tolInd),1)+'%.</strong></div>');
+    }
+    if(s.grpOk===false){
+      H.push('<div class="note stop"><strong>Group average is outside ±'+fx(num(r.tolGrp),1)+'%.</strong> '+
+        'A group-wide bias usually points at the gauge, the ram area, or the assumed friction — not at the crew. '+
+        'Check the calibration certificate against the ram area entered in Setup before anyone touches a tendon.</div>');
+    }
+    if(s.loBad){
+      H.push('<div class="note rfi"><strong>'+s.loBad+' lift-off reading'+(s.loBad===1?'':'s')+' outside the entered band.</strong> '+
+        'Confirm the band actually came from the shop drawing or the spec. If it did not, the reading is not out of tolerance — '+
+        'the tolerance is undefined, and that is an RFI.</div>');
+    }
+  }
+  H.push('</div></div>');
+
+  // exposure
+  H.push('<div class="card"><h3>Coordination, safety &amp; cost exposure</h3><div class="body">'+
+    '<div class="note stop"><strong>Safety — not negotiable.</strong> Live-end exclusion zone at both ends before the pump is started. '+
+    'No personnel behind or in line with the jack at any time. Safety cage stays on until the ram is released. '+
+    'Nobody walks the slab past a stressed-but-uncut tail without the tail being capped or the zone barricaded.</div>'+
+    '<div class="note"><strong>Coordination.</strong> Stressing access at both ends has to be there when the crew shows up — no scaffold, '+
+    'no stacked material, no backfill against the live end. Confirm the stressing window against the GC’s schedule and against '+
+    'the cylinder break schedule, because f′<sub>ci</sub> drives the date, not the calendar.</div>'+
+    '<div class="note"><strong>Documentation.</strong> This record ties to shop drawing '+(r.shopDwg?'<strong>'+esc(r.shopDwg)+'</strong>':'<em>[not entered]</em>')+'. '+
+    'If the drawing is revised after stressing, the record does not automatically follow — note the revision on the sheet and keep the '+
+    'superseded version. Elongation records are the first thing asked for in a slab dispute.</div>'+
+    '<div class="note"><strong>Cost exposure.</strong> Out-of-tolerance tendons, a gauge that fails recalibration, or stressing held for '+
+    'low cylinder breaks are all delay and rework events. Notice them the day they happen, in writing, with the sheet attached. '+
+    'A record produced three weeks later documents the tendon but not the delay.</div>'+
+    '</div></div>');
+
+  $('#reviewHost').innerHTML = H.join('');
+
+  function row(k,v){ return '<tr><td class="t">'+k+'</td><td>'+v+'</td></tr>'; }
+}
+
+/* ---------- email ---------- */
+function buildMail(){
+  const r = rec(), s = C.summary(r);
+  const subj = [
+    (r.jobNo?r.jobNo+' — ':'') + (r.job||'PT Elongation Record'),
+    [r.bldg, r.pour].filter(Boolean).join(' ') || null,
+    'Tendon Elongation & Lift-Off Record'
+  ].filter(Boolean).join(' | ');
+
+  const L = [];
+  L.push('Attached is the tendon elongation and lift-off record for '+
+    [r.bldg,r.pour,r.level].filter(Boolean).join(', ')+
+    (r.job?' at '+r.job:'')+'.');
+  L.push('');
+  L.push('Reference: PT shop drawing '+(r.shopDwg||'[shop drawing no. / rev]')+'.');
+  L.push('Strand: '+(r.dia==='custom'?'':(r.dia+'" '))+fx(C.fpu(r),0)+' ksi, Aps '+fx(C.aps(r),3)+' in2, jacked to '+fx(C.jack(r),0)+'% fpu ('+fxo(C.pjStrand(r),2)+' kips/strand).');
+  L.push('Equipment: ram '+(r.ramId||'[id]')+' / gauge '+(r.gaugeId||'[id]')+', calibrated '+(r.calDate||'[date]')+
+    (r.calExp?', expires '+r.calExp:'')+'.');
+  L.push('');
+  L.push('Summary:');
+  L.push('  Tendons on record: '+s.count+(s.entered?' ('+s.entered+' recorded)':''));
+  if(s.paired){
+    L.push('  Sum calculated elongation: '+fx(s.sumCalc,2)+' in');
+    L.push('  Sum measured elongation:   '+fx(s.sumMeas,2)+' in');
+    L.push('  Group average difference:  '+((s.grpPct>0?'+':'')+fx(s.grpPct,2))+'% (criterion +/-'+fx(num(r.tolGrp),1)+'%)');
+    L.push('  Tendons outside +/-'+fx(num(r.tolInd),1)+'%: '+s.bad);
+  }
+  L.push('');
+  if(s.bad){
+    L.push(s.bad+' tendon'+(s.bad===1?'':'s')+' fell outside the individual elongation tolerance carried on this record. '+
+      'We have stopped work on '+(s.bad===1?'that tendon':'those tendons')+' pending review by the PT supplier and the engineer of record, '+
+      'and we are holding the jack and gauge on site so the equipment can be verified as part of that review. '+
+      'Please advise on the disposition so we can keep the pour sequence moving.');
+    L.push('');
+  }
+  L.push('The acceptance tolerances shown on the record are those carried on the PT shop drawing referenced above. '+
+    'If the specification carries a different criterion, please advise and we will reissue the record against the governing document.');
+  L.push('');
+  L.push('Please confirm receipt.');
+  L.push('');
+  L.push('Respectfully,');
+  L.push('');
+  L.push('JC Concrete, LLC');
+
+  $('#mailSubj').value = subj;
+  $('#mailBody').value = L.join('\n');
+}
+function openMail(){
+  const r = rec();
+  const to = (r.emailTo||'').trim();
+  const q = [];
+  if((r.emailCc||'').trim()) q.push('cc='+encodeURIComponent(r.emailCc.trim()));
+  q.push('subject='+encodeURIComponent($('#mailSubj').value));
+  q.push('body='+encodeURIComponent($('#mailBody').value));
+  const url = 'mailto:'+encodeURIComponent(to).replace(/%40/g,'@').replace(/%2C/g,',')+'?'+q.join('&');
+  if(url.length > 1900) toast('Long body — if the draft looks cut off, use Copy body instead');
+  window.location.href = url;
+}
+async function renderShareNote(){
+  const el = $('#shareNote');
+  if(!el) return;
+  const hosted = !!(await downloadsApi());
+  const webShare = !!(navigator.canShare && navigator.share);
+  if(webShare){
+    el.className = 'note ok';
+    el.innerHTML = '<strong>This device has a share sheet.</strong> <em>Share / email</em> hands the PDF straight to Mail as an '+
+      'attachment — you still press send.';
+  } else if(hosted){
+    el.className = 'note';
+    el.innerHTML = '<strong>Files come through a save prompt here.</strong> Generating asks you to confirm the file first. '+
+      'In the Claude app on iPad that confirmation opens the iOS share sheet, so you can send it to Mail or copy it into '+
+      'Acrobat Reader from there. On a computer it lands in Downloads and you attach it to the draft yourself.';
+  } else {
+    el.className = 'note';
+    el.innerHTML = '<strong>No share sheet on this device.</strong> The file downloads instead — attach it to the draft manually.';
+  }
+}
+
+/* ---------- CSV ---------- */
+function csv(){
+  const r = rec();
+  const q = v => '"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const L = [];
+  L.push([['Job',r.job],['Job No',r.jobNo],['Building',r.bldg],['Pour',r.pour],['Level',r.level],
+          ['Shop Dwg',r.shopDwg],['Ram',r.ramId],['Gauge',r.gaugeId],['Calib',r.calDate],
+          ['Aps',r.aps],['fpu',r.fpu],['Eps',r.eps],['Jack %',r.jackPct],['Ram Area',r.ramArea],
+          ['Gauge Corr %',r.calPct],['Tol Ind %',r.tolInd],['Tol Grp %',r.tolGrp],
+          ['Length Display',r.lenMode==='dec'?'Decimal inches':'Inch fractions'],
+          ['Read To Nearest',r.lenMode==='dec'?'n/a':('1/'+(num(r.den)||16))]]
+         .map(p=>q(p[0])+','+q(p[1])).join('\n'));
+  L.push('');
+  // Fractions as read for the record; decimals alongside so the sheet can do arithmetic.
+  L.push(['Mark','Grid/Location','Group','Strands','Length ft',
+          'Calc Elong (as read)','Calc Elong dec in','Estimated?',
+          'Req Gauge psi','Act Gauge psi',
+          'Mark A (as read)','Mark A dec in','Mark B (as read)','Mark B dec in',
+          'Gross','Gross dec in','Seat (as read)','Seat dec in','Net Elong','Net Elong dec in',
+          '% Diff','Status','L/O Gauge psi','L/O Force k','% GUTS','L/O Status','Notes'].map(q).join(','));
+  r.tendons.forEach(t=>{
+    const g=C.gross(t), n=C.net(t);
+    L.push([t.mark,t.loc,t.grp,num(t.strands)||1,t.len,
+      t.calc,fx(parseLen(t.calc),4),t.est?'EST':'',
+      fx(C.reqPsi(r),0),t.apsi,
+      t.mka,fx(parseLen(t.mka),4),t.mkb,fx(parseLen(t.mkb),4),
+      fmtLen(g,r),fx(g,4),t.seat,fx(parseLen(t.seat),4),fmtLen(n,r),fx(n,4),
+      fx(C.pct(t),2),C.status(r,t),t.lopsi,fx(C.loForce(r,t),2),fx(C.loGuts(r,t),2),C.loStatus(r,t),t.notes
+    ].map(q).join(','));
+  });
+  const s = C.summary(r);
+  L.push('');
+  L.push([q('Sum Calc'),q(fmtLen(s.sumCalc,r)),q(fx(s.sumCalc,4))].join(','));
+  L.push([q('Sum Measured'),q(fmtLen(s.sumMeas,r)),q(fx(s.sumMeas,4))].join(','));
+  L.push([q('Group Avg % Diff'),q(fx(s.grpPct,2))].join(','));
+  L.push([q('Outside Individual Tolerance'),q(s.bad)].join(','));
+  return L.join('\n');
+}
+
+/* ============================================================
+   7. wiring
+   ============================================================ */
+function addTendons(list){
+  const r = rec();
+  const have = new Set(r.tendons.map(t=>String(t.mark).toUpperCase()));
+  let added=0, dupes=0;
+  list.forEach(t=>{
+    const key = String(t.mark).toUpperCase();
+    if(key && have.has(key)){ dupes++; return; }
+    if(key) have.add(key);
+    r.tendons.push(Object.assign(blankTendon(), t));
+    added++;
+  });
+  save(); renderTitleblock();
+  toast(added+' tendon'+(added===1?'':'s')+' added'+(dupes?' · '+dupes+' duplicate mark'+(dupes===1?'':'s')+' skipped':''));
+  go('tendons');
+}
+
+function init(){
+  load();
+  renderProjSel();
+  fillSetup();
+  renderTitleblock();
+  bindSetup();
+  go('setup');
+
+  $$('#rail button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.p)));
+
+  // project management
+  $('#projSel').addEventListener('change', e=>{
+    DB.active = e.target.value; save();
+    fillSetup(); renderTitleblock();
+    if(panel==='tendons') renderTendons();
+    if(panel==='review') renderReview();
+  });
+  $('#projNew').addEventListener('click', ()=>{
+    const r = blankRecord('New record');
+    DB.records.push(r); DB.active = r.id; save();
+    renderProjSel(); fillSetup(); renderTitleblock(); go('setup');
+    toast('New record created');
+  });
+  $('#projDup').addEventListener('click', ()=>{
+    const c = JSON.parse(JSON.stringify(rec()));
+    c.id = 'r'+Math.random().toString(36).slice(2,10);
+    c.recName = (c.recName||'Record')+' (copy)';
+    c.tendons.forEach(t=>{ t.apsi=t.mka=t.mkb=t.seat=t.lopsi=t.notes=''; });
+    DB.records.push(c); DB.active = c.id; save();
+    renderProjSel(); fillSetup(); renderTitleblock();
+    toast('Duplicated — field entries cleared, schedule kept');
+  });
+  $('#projDel').addEventListener('click', ()=>{
+    if(DB.records.length===1){ toast('Cannot delete the only record'); return; }
+    const r = rec();
+    if(!confirm('Delete "'+(r.recName||'Untitled')+'" and its '+r.tendons.length+' tendon'+(r.tendons.length===1?'':'s')+'? This cannot be undone.')) return;
+    DB.records = DB.records.filter(x=>x.id!==r.id);
+    DB.active = DB.records[0].id; save();
+    renderProjSel(); fillSetup(); renderTitleblock(); go('setup');
+    toast('Record deleted');
+  });
+
+  // ---- plans ----
+  const drop = $('#drop'), fileIn = $('#file');
+  drop.addEventListener('click', ()=>fileIn.click());
+  drop.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fileIn.click(); } });
+  ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.add('hot'); }));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.remove('hot'); }));
+  drop.addEventListener('drop', e=>{ const f = e.dataTransfer.files[0]; if(f) readPlan(f); });
+  fileIn.addEventListener('change', e=>{ const f = e.target.files[0]; if(f) readPlan(f); });
+
+  async function readPlan(f){
+    if(!/pdf$/i.test(f.name) && f.type!=='application/pdf'){ toast('Needs to be a PDF'); return; }
+    $('#fileInfo').innerHTML = '<div class="note">Reading <strong>'+esc(f.name)+'</strong>…</div>';
+    let res;
+    try{
+      const buf = await f.arrayBuffer();
+      res = await extractPlanText(buf);
+      if(plan && plan.url) URL.revokeObjectURL(plan.url);
+      plan = {name:f.name, size:f.size, pageCount:res.pageCount, tokens:res.tokens,
+              cands:candidateMarks(res.tokens), url:URL.createObjectURL(f)};
+    }catch(e){
+      $('#fileInfo').innerHTML = '<div class="note stop"><strong>Could not read that PDF.</strong> '+
+        'It may be encrypted or malformed. Use the bulk range or paste the tendon schedule instead — that path does not depend on the file at all.</div>';
+      return;
+    }
+    const kb = (plan.size/1024).toFixed(0);
+    const nTok = plan.tokens.length;
+    let info = '<table class="simple"><tbody>'+
+      '<tr><td class="t">File</td><td>'+esc(plan.name)+'</td></tr>'+
+      '<tr><td class="t">Size</td><td>'+kb+' KB</td></tr>'+
+      '<tr><td class="t">Pages detected</td><td>'+(plan.pageCount||'—')+'</td></tr>'+
+      '<tr><td class="t">Text strings found</td><td>'+nTok+'</td></tr>'+
+      '<tr><td class="t">Candidate marks</td><td>'+plan.cands.length+'</td></tr>'+
+      '</tbody></table>'+
+      '<div class="btnrow" style="margin-top:12px"><a class="btn ghost" href="'+plan.url+'" target="_blank" rel="noopener">Open plan in new tab</a></div>';
+
+    if(nTok < 15){
+      info += '<div class="note stop" style="margin-top:12px"><strong>No usable text layer.</strong> '+
+        'This is almost certainly a scanned or flattened-image drawing, which is normal for PT shop drawings. '+
+        'Nothing can be read off it here — open it in the new tab, read the tendon schedule, and enter the tendons with the '+
+        'bulk range or the paste box below. That is the reliable path anyway.</div>';
+    } else {
+      info += '<div class="note" style="margin-top:12px"><strong>Text layer read.</strong> '+
+        'Candidates below are pattern matches only. The tendon schedule on the drawing is the source of record — '+
+        'lengths and calculated elongations must be read off it by a person.</div>';
+    }
+    $('#fileInfo').innerHTML = info;
+
+    // candidates
+    if(plan.cands.length){
+      $('#candCard').style.display='';
+      $('#cands').innerHTML = plan.cands.map(([m,n])=>
+        '<label class="chip"><input type="checkbox" value="'+esc(m)+'"> '+esc(m)+
+        '<span style="color:var(--ink-3);font-size:10px">×'+n+'</span></label>').join('');
+    } else $('#candCard').style.display='none';
+
+    // text dump
+    if(nTok){
+      $('#txtCard').style.display='';
+      $('#txtCount').textContent = nTok+' strings';
+      renderDump('');
+    } else $('#txtCard').style.display='none';
+  }
+
+  function renderDump(q){
+    if(!plan) return;
+    const t = plan.tokens;
+    const list = q ? t.filter(x=>x.toUpperCase().includes(q.toUpperCase())) : t;
+    $('#txtDump').textContent = list.slice(0,1200).join('\n') + (list.length>1200 ? '\n… '+(list.length-1200)+' more' : '');
+  }
+  $('#txtFind').addEventListener('input', e=>renderDump(e.target.value));
+
+  $('#candAll').addEventListener('click', ()=>{
+    const boxes = $$('#cands input');
+    const on = boxes.some(b=>!b.checked);
+    boxes.forEach(b=>b.checked=on);
+  });
+  $('#candClear').addEventListener('click', ()=>$$('#cands input').forEach(b=>b.checked=false));
+  $('#candAdd').addEventListener('click', ()=>{
+    const marks = $$('#cands input').filter(b=>b.checked).map(b=>b.value);
+    if(!marks.length){ toast('Nothing selected'); return; }
+    addTendons(marks.map(m=>({mark:m})));
+  });
+
+  $('#bkAdd').addEventListener('click', ()=>{
+    const pre = $('#bkPre').value.trim(), suf = $('#bkSuf').value.trim();
+    const a = parseInt($('#bkFrom').value,10), b = parseInt($('#bkTo').value,10);
+    if(!isFinite(a)||!isFinite(b)||b<a){ toast('Check the from / to numbers'); return; }
+    if(b-a > 999){ toast('That range is over 1000 tendons'); return; }
+    const st = parseInt($('#bkStr').value,10)||1;
+    const len = $('#bkLen').value.trim(), grp = $('#bkGrp').value.trim();
+    const list=[];
+    for(let i=a;i<=b;i++) list.push({mark:pre+i+suf, strands:st, len:len, grp:grp});
+    addTendons(list);
+  });
+
+  $('#pasteClear').addEventListener('click', ()=>{ $('#pasteBox').value=''; });
+  $('#pasteAdd').addEventListener('click', ()=>{
+    const raw = $('#pasteBox').value.trim();
+    if(!raw){ toast('Paste box is empty'); return; }
+    const list=[];
+    raw.split(/\r?\n/).forEach(line=>{
+      if(!line.trim()) return;
+      const c = line.split(/\t|,|\s{2,}/).map(x=>x.trim());
+      if(!c[0]) return;
+      if(/^(mark|tendon)/i.test(c[0])) return;   // header row
+      list.push({
+        mark:c[0], loc:c[1]||'',
+        strands: (parseInt(c[2],10)||1),
+        len: (c[3]||'').replace(/[^0-9.\-]/g,''),
+        calc:(c[4]||'').replace(/[^0-9.\-]/g,''),
+        grp: c[5]||''
+      });
+    });
+    if(!list.length){ toast('Could not read any rows'); return; }
+    addTendons(list);
+  });
+
+  // ---- tendons ----
+  $('#addRow').addEventListener('click', ()=>{
+    const r = rec();
+    r.tendons.push(blankTendon(''));
+    save(); renderTendons();
+    const inputs = $$('#tendonHost input[data-k="mark"]');
+    if(inputs.length) inputs[inputs.length-1].focus();
+  });
+  $('#estAll').addEventListener('click', ()=>{
+    const r = rec();
+    let n=0, noLen=0;
+    r.tendons.forEach(t=>{
+      if(parseLen(t.calc)>0) return;
+      if(!(num(t.len)>0)){ noLen++; return; }
+      const e = C.estElong(r,t);
+      if(isFinite(e)){ t.calc = fmtLen(e,r); t.est = true; n++; }
+    });
+    save(); renderTendons();
+    toast(n?(n+' estimated — flagged E, replace with shop-drawing values'):(noLen?'Need lengths first':'Nothing to estimate'));
+  });
+  $('#clearField').addEventListener('click', ()=>{
+    const r = rec();
+    if(!confirm('Clear every field entry (gauge pressures, marks, seating, lift-off, notes) on all '+r.tendons.length+' tendons? The schedule is kept.')) return;
+    r.tendons.forEach(t=>{ t.apsi=t.mka=t.mkb=t.seat=t.lopsi=t.notes=''; });
+    save(); renderTendons(); toast('Field entries cleared');
+  });
+
+  let rz=null;
+  window.addEventListener('resize', ()=>{
+    clearTimeout(rz);
+    rz = setTimeout(()=>{ if(panel==='tendons') renderTendons(); }, 200);
+  });
+
+  // ---- export ----
+  function guard(){
+    const r = rec();
+    if(!r.tendons.length){ toast('No tendons in this record'); return false; }
+    return true;
+  }
+  $('#genBlank').addEventListener('click', async ()=>{
+    if(!guard()) return;
+    const r = rec();
+    if(await deliver(buildPdf(r,false), pdfName(r,false), 'application/pdf'))
+      toast('Fillable sheet ready — open it in Acrobat Reader');
+  });
+  $('#genFilled').addEventListener('click', async ()=>{
+    if(!guard()) return;
+    const r = rec();
+    await deliver(buildPdf(r,true), pdfName(r,true), 'application/pdf');
+  });
+  $('#genCsv').addEventListener('click', async ()=>{
+    if(!guard()) return;
+    const r = rec();
+    await deliver(new TextEncoder().encode(csv()), pdfName(r,true).replace(/\.pdf$/,'.csv'), 'text/csv');
+  });
+  async function shareOrDown(filled){
+    if(!guard()) return;
+    const r = rec();
+    buildMail();
+    const bytes = buildPdf(r, filled);
+    const name = pdfName(r, filled);
+    if(await shareFile(bytes, name, $('#mailSubj').value, $('#mailBody').value)){
+      toast('Handed to the share sheet — pick Mail');
+      return;
+    }
+    await deliver(bytes, name, 'application/pdf');
+  }
+  $('#genBlankShare').addEventListener('click', ()=>shareOrDown(false));
+  $('#genFilledShare').addEventListener('click', ()=>shareOrDown(true));
+
+  $('#mailOpen').addEventListener('click', openMail);
+  $('#mailRebuild').addEventListener('click', ()=>{ buildMail(); toast('Draft rebuilt from the record'); });
+  $('#mailCopy').addEventListener('click', async ()=>{
+    try{ await navigator.clipboard.writeText($('#mailBody').value); toast('Body copied'); }
+    catch(e){ $('#mailBody').select(); toast('Press copy — text is selected'); }
+  });
+
+  $('#expJson').addEventListener('click', async ()=>{
+    const r = rec();
+    await deliver(new TextEncoder().encode(JSON.stringify(r,null,2)),
+      slug(r.recName||'record')+'-strandline.json', 'application/json');
+  });
+  $('#expJsonAll').addEventListener('click', async ()=>{
+    await deliver(new TextEncoder().encode(JSON.stringify(DB,null,2)),
+      'strandline-all-records.json', 'application/json');
+  });
+  $('#impJsonBtn').addEventListener('click', ()=>$('#impJson').click());
+  $('#impJson').addEventListener('change', async e=>{
+    const f = e.target.files[0]; if(!f) return;
+    try{
+      const p = JSON.parse(await f.text());
+      const incoming = Array.isArray(p.records) ? p.records : [p];
+      let n=0;
+      incoming.forEach(r=>{
+        if(!r || !Array.isArray(r.tendons)) return;
+        const b = blankRecord();
+        for(const k in b) if(!(k in r)) r[k]=b[k];
+        r.id = 'r'+Math.random().toString(36).slice(2,10);
+        DB.records.push(r); n++;
+      });
+      if(!n){ toast('No records found in that file'); return; }
+      DB.active = DB.records[DB.records.length-1].id;
+      save(); renderProjSel(); fillSetup(); renderTitleblock();
+      toast(n+' record'+(n===1?'':'s')+' imported');
+      go('setup');
+    }catch(err){ toast('That file is not a Strandline export'); }
+    e.target.value='';
+  });
+
+  window.addEventListener('beforeunload', ()=>{ try{ localStorage.setItem(LS_KEY, JSON.stringify(DB)); }catch(e){} });
+}
+
+init();
+</script>
+
+</body>
+</html>
