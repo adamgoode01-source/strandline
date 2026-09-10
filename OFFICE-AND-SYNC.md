@@ -15,6 +15,31 @@ and the server works whether the schedule was read by machine or typed in.
 
 ---
 
+## Two ways to get a schedule in
+
+**Assisted entry** is the default and needs nothing external — no key, no
+network, nothing leaves the machine. Strandline finds the ruled tables on each
+sheet, shows you the one you pick at full size, and you read the rows off it.
+The expansion into individual tendons, the cross-check against the sheet’s
+stated quantities, and the form are automatic.
+
+That split is deliberate. A person has to check every elongation regardless —
+each one decides whether a tendon passes — so the reading was never the part
+worth automating. Typing 18 rows takes two minutes; turning them into 121
+tendons, acceptance bands, forms and PDFs is the work.
+
+Detection narrows a sheet to a handful of candidates and **you** pick which is
+the schedule. Choosing automatically would be right most of the time and
+quietly wrong the rest, on the numbers the record is judged by.
+
+Local OCR was measured and rejected: Tesseract managed 52% confidence on the
+real schedule, and cell by cell with a digit whitelist it read `4 1/4` as
+`41/` and `4 3/4` as nothing at all. Stacked fractions are not a text line,
+and a fraction wrong by a sixteenth changes the answer.
+
+**The reader** (below) is the optional accelerator: it pre-fills the same rows
+using the Claude API, for anyone who has a key and wants to skip the typing.
+
 ## Why the reader exists
 
 PT shop drawings are exported with the text converted to outlines. The

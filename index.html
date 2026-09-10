@@ -478,6 +478,27 @@ hr.r{border:0;border-top:1px solid var(--rule);margin:14px 0}
 .homehead p{margin:2px 0 0;color:var(--ink-3);font-size:12px;
   text-transform:uppercase;letter-spacing:.08em}
 .crumb{padding:12px 20px 0}
+.assist{display:grid;grid-template-columns:minmax(280px,1fr) minmax(320px,1fr);gap:16px;align-items:start}
+@media (max-width:1100px){ .assist{grid-template-columns:1fr} }
+.assist .sheet{border:1px solid var(--rule);background:#fff;padding:6px;position:sticky;top:8px}
+.assist .sheet img{display:block;width:100%;height:auto;image-rendering:crisp-edges}
+.cands{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.cand{border:2px solid var(--rule);background:#fff;padding:3px;cursor:pointer;line-height:0}
+.cand:hover{border-color:var(--accent)}
+.cand.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-dim)}
+.cand img{display:block;max-width:130px;max-height:120px;width:auto;height:auto}
+.cand .lbl{font-family:var(--f-cond);font-size:9px;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--ink-3);line-height:1.4;padding-top:2px;text-align:center}
+table.entry{width:100%;border-collapse:collapse;font-family:var(--f-mono);font-size:12px}
+table.entry th{font-family:var(--f-cond);font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--ink-3);text-align:left;padding:0 4px 4px;font-weight:700}
+table.entry td{padding:1px 2px}
+table.entry input{width:100%;font-family:var(--f-mono);font-size:12px;padding:5px 6px;
+  border:1px solid var(--rule);background:var(--field-bg);color:var(--ink)}
+table.entry input:focus-visible{outline:2px solid var(--accent);outline-offset:-1px}
+table.entry input.bad{border-color:var(--bad);background:var(--bad-bg)}
+table.entry td.n{font-family:var(--f-cond);font-size:10px;color:var(--ink-3);width:22px;text-align:right;padding-right:4px}
+table.entry td.out{font-family:var(--f-mono);font-size:11px;color:var(--ink-3);white-space:nowrap;padding-left:6px}
 .syncbar{padding:8px 20px 0;color:var(--ink-3);font-size:11px;
   text-transform:uppercase;letter-spacing:.07em;font-family:var(--f-cond);font-weight:600}
 .syncbar b{color:var(--ink-2)}
@@ -620,6 +641,54 @@ hr.r{border:0;border-top:1px solid var(--rule);margin:14px 0}
           <label class="f"><span>Gauge correction (%)</span><input data-pd="calPct" inputmode="decimal"></label>
           <label class="f"><span>Required f'ci (psi)</span><input data-pd="fciReq" inputmode="numeric"></label>
           <label class="f"><span>Send records to</span><input data-pd="emailTo" inputmode="email"></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="assistCard" style="display:none">
+      <h3>Enter a schedule from the plans <span class="pill">DESKTOP</span></h3>
+      <div class="body">
+        <div class="note">Everything here runs on this machine &mdash; no key, no network, nothing sent
+          anywhere. Strandline finds the ruled tables on each sheet and shows you the one you pick,
+          full size. You read the rows off it; the expansion, the cross-check against the stated
+          quantities, and the forms are automatic.</div>
+        <div class="btnrow" style="margin-top:12px">
+          <button class="btn primary" id="assistPick">Choose the plan set</button>
+          <button class="btn ghost" id="assistReset" style="display:none">Start over</button>
+        </div>
+        <div id="assistStatus" style="margin-top:10px"></div>
+
+        <div id="assistPages" style="display:none;margin-top:14px">
+          <label class="f" style="max-width:320px"><span>Sheet</span>
+            <select id="assistPage"></select></label>
+          <div class="eyebrow" style="margin-top:10px">Tables found &mdash; pick the schedule</div>
+          <div class="cands" id="assistCands"></div>
+        </div>
+
+        <div id="assistWork" style="display:none;margin-top:16px">
+          <div class="assist">
+            <div class="sheet"><img id="assistImg" alt="the schedule as printed"></div>
+            <div>
+              <div class="eyebrow">Rows as printed</div>
+              <div class="note" style="margin:8px 0">Type what the sheet says. Ranges are fine
+                &mdash; <code>300 THRU 308</code>, <code>372 AND 373</code>, or a single number.
+                Keep the letter on the length (<code>9 X 34A</code>): it is the anchorage type and
+                tells the crew which end to pull.</div>
+              <div style="overflow-x:auto">
+                <table class="entry" id="assistTable"></table>
+              </div>
+              <div class="btnrow" style="margin-top:10px">
+                <button class="btn sm ghost" id="assistAddRow">+ Row</button>
+                <button class="btn sm ghost" id="assistPaste">Paste from a spreadsheet</button>
+              </div>
+              <textarea id="assistPasteBox" rows="4" style="display:none;margin-top:8px;width:100%"
+                placeholder="300 THRU 308&#9;9 X 34A&#9;2 1/2&#10;309 THRU 311&#9;3 X 51A&#9;3 7/8"></textarea>
+              <div id="assistSummary" style="margin-top:12px"></div>
+              <div class="btnrow" style="margin-top:12px">
+                <button class="btn primary" id="assistCreate">Create the form</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -2810,6 +2879,195 @@ function candidateMarks(tokens){
 let plan = null;   // {name,size,pageCount,tokens,cands,url}
 let panel = 'setup';
 
+/* ---------- assisted entry ----------
+   Local table detection plus typed rows. No key, no network, nothing leaves
+   the machine. The operator reads the schedule - which they have to check
+   anyway, since every elongation decides whether a tendon passes - and the
+   tedious half is automatic: expanding ranges into tendons, cross-checking
+   the stated quantities, building the form.
+
+   Deliberately not automated: which region is the schedule. Detection narrows
+   a sheet to a handful of candidates and the person picks from thumbnails.
+   Choosing for them would be right most of the time and quietly wrong the
+   rest, on the numbers the record is judged by. */
+const AS = { pdf: null, pages: [], page: null, cand: null, rows: [] };
+const AS_MIN_ROWS = 6;
+
+function asBlankRow(){ return { bundle:'', qtyFt:'', elong:'' }; }
+
+function asRenderTable(){
+  const host = $('#assistTable');
+  if(!host) return;
+  while(AS.rows.length < AS_MIN_ROWS) AS.rows.push(asBlankRow());
+  host.innerHTML =
+    '<thead><tr><th></th><th>Bundle no.</th><th>Qty &times; ft</th><th>Elongation</th><th></th></tr></thead>'+
+    '<tbody>'+AS.rows.map((r,i)=>{
+      const b = parseBundleSafe(r.bundle);
+      const q = parseQtyFtSafe(r.qtyFt);
+      const e = parseLen(r.elong);
+      const filled = (r.bundle||r.qtyFt||r.elong);
+      let out = '';
+      if(filled){
+        const n = b ? b.count : 0;
+        out = (n ? n+(n===1?' tendon':' tendons') : '?');
+        if(q && q.qty != null && b && q.qty !== b.count) out += ' \u2260'+q.qty;
+      }
+      return '<tr>'+
+        '<td class="n">'+(i+1)+'</td>'+
+        '<td><input data-ar="'+i+'" data-af="bundle" value="'+esc(r.bundle)+'"'+
+          (filled && !b ? ' class="bad"' : '')+' autocapitalize="characters" spellcheck="false"></td>'+
+        '<td><input data-ar="'+i+'" data-af="qtyFt" value="'+esc(r.qtyFt)+'"'+
+          (filled && !q ? ' class="bad"' : '')+' autocapitalize="characters" spellcheck="false"></td>'+
+        '<td><input data-ar="'+i+'" data-af="elong" value="'+esc(r.elong)+'"'+
+          (r.elong && !isFinite(e) ? ' class="bad"' : '')+' spellcheck="false"></td>'+
+        '<td class="out">'+esc(out)+'</td>'+
+      '</tr>';
+    }).join('')+'</tbody>';
+
+  $$('#assistTable input').forEach(el=>{
+    el.addEventListener('input', ()=>{
+      AS.rows[+el.dataset.ar][el.dataset.af] = el.value;
+      asRenderSummary();
+      // grow as the last row is used, so there is never a wall of empty rows
+      const last = AS.rows[AS.rows.length-1];
+      if(last.bundle || last.qtyFt || last.elong){ AS.rows.push(asBlankRow()); asRenderTable(); }
+    });
+    el.addEventListener('blur', ()=>{ asRenderTable(); asRenderSummary(); });
+  });
+}
+
+/* The same parsers the reader uses, wrapped so a half-typed cell does not
+   throw while someone is still typing it. */
+function parseBundleSafe(v){
+  const t = String(v==null?'':v).toUpperCase().replace(/\s+/g,' ').trim();
+  if(!t) return null;
+  let m = /^([A-Z]*)(\d+)\s*(?:THRU|THROUGH|TO|-)\s*([A-Z]*)(\d+)$/.exec(t);
+  if(m){ const lo=+m[2], hi=+m[4]; if(hi<lo) return null;
+    return { prefix:m[1]||m[3]||'', from:lo, to:hi, count:hi-lo+1, list:null }; }
+  m = /^([A-Z]*)(\d+)\s*(?:AND|&|\+)\s*([A-Z]*)(\d+)$/.exec(t);
+  if(m){ const a=+m[2], b=+m[4]; const prefix=m[1]||m[3]||'';
+    if(b===a+1) return { prefix, from:a, to:b, count:2, list:null };
+    return { prefix, from:a, to:b, count:2, list:[a,b] }; }
+  m = /^([A-Z]*)(\d+)$/.exec(t);
+  if(m) return { prefix:m[1]||'', from:+m[2], to:+m[2], count:1, list:null };
+  return null;
+}
+function parseQtyFtSafe(v){
+  const t = String(v==null?'':v).toUpperCase().replace(/\s+/g,' ').trim();
+  if(!t) return null;
+  let m = /^(\d+)\s*[X\u00D7]\s*(\d+(?:\.\d+)?)\s*([A-Z])?$/.exec(t);
+  if(m) return { qty:+m[1], feet:parseFloat(m[2]), anchor:m[3]||'' };
+  m = /^(\d+(?:\.\d+)?)\s*([A-Z])?$/.exec(t);
+  if(m) return { qty:null, feet:parseFloat(m[1]), anchor:m[2]||'' };
+  return null;
+}
+
+function asExpand(){
+  const tendons = [], problems = [];
+  const seen = new Set();
+  let statedTotal = 0;
+  AS.rows.forEach((r,i)=>{
+    if(!(r.bundle || r.qtyFt || r.elong)) return;
+    const where = 'row '+(i+1);
+    const b = parseBundleSafe(r.bundle);
+    const q = parseQtyFtSafe(r.qtyFt);
+    const e = parseLen(r.elong);
+    if(!b){ problems.push({ level:'error', msg: where+': bundle numbers unreadable' }); return; }
+    if(!q){ problems.push({ level:'error', msg: where+': quantity and length unreadable' }); return; }
+    if(!isFinite(e)) problems.push({ level:'warn', msg: where+': elongation blank or unreadable' });
+    if(q.qty != null){
+      statedTotal += q.qty;
+      if(q.qty !== b.count) problems.push({ level:'error',
+        msg: where+': the sheet says '+q.qty+' but the bundle range covers '+b.count+' \u2014 check it against the drawing' });
+    }
+    const marks = b.list ? b.list.slice() : Array.from({length:b.count},(_,k)=>b.from+k);
+    marks.forEach(n=>{
+      const mark = (b.prefix||'')+n;
+      if(seen.has(mark)){ problems.push({ level:'error', msg: where+': tendon '+mark+' already entered' }); return; }
+      seen.add(mark);
+      tendons.push({ mark, len: isFinite(q.feet)?String(q.feet):'', anchor: q.anchor,
+                     calc: isFinite(e) ? fmtFrac(e, 16) : '' });
+    });
+  });
+  return { tendons, problems, statedTotal };
+}
+
+function asRenderSummary(){
+  const el = $('#assistSummary');
+  if(!el) return;
+  const { tendons, problems, statedTotal } = asExpand();
+  if(!tendons.length && !problems.length){
+    el.innerHTML = '<div class="note">Nothing entered yet.</div>';
+    return;
+  }
+  const errs = problems.filter(p=>p.level==='error');
+  const warns = problems.filter(p=>p.level!=='error');
+  let html = '<div class="note'+(errs.length?' stop':'')+'"><strong>'+tendons.length+
+    ' tendon'+(tendons.length===1?'':'s')+'</strong>';
+  if(statedTotal) html += ' &mdash; the sheet\u2019s quantities add to '+statedTotal+
+    (statedTotal===tendons.length ? ', which agrees' : ', which does not agree');
+  html += '.';
+  if(errs.length) html += '<ul style="margin:8px 0 0 18px;padding:0">'+
+    errs.map(p=>'<li>'+esc(p.msg)+'</li>').join('')+'</ul>';
+  if(warns.length) html += '<ul style="margin:8px 0 0 18px;padding:0;color:var(--ink-3)">'+
+    warns.map(p=>'<li>'+esc(p.msg)+'</li>').join('')+'</ul>';
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function asShowStatus(html, cls){
+  const el = $('#assistStatus');
+  if(el) el.innerHTML = html ? '<div class="note'+(cls?' '+cls:'')+'">'+html+'</div>' : '';
+}
+
+function asRenderPages(){
+  const sel = $('#assistPage');
+  const withTables = AS.pages.filter(p=>p.candidates.length);
+  sel.innerHTML = AS.pages.map(p=>
+    '<option value="'+p.page+'">Sheet '+p.page+
+    (p.candidates.length ? ' \u2014 '+p.candidates.length+' table'+(p.candidates.length===1?'':'s') : ' \u2014 none')+
+    '</option>').join('');
+  const first = withTables.length ? withTables[0].page : 1;
+  sel.value = String(first);
+  AS.page = first;
+  $('#assistPages').style.display = '';
+  asRenderCands();
+}
+
+function asRenderCands(){
+  const host = $('#assistCands');
+  const pg = AS.pages.find(p=>p.page === AS.page);
+  const cands = pg ? pg.candidates : [];
+  if(!cands.length){
+    host.innerHTML = '<div class="note">No ruled table found on this sheet. Try another, or use the '+
+      'paste box after picking any table.</div>';
+    return;
+  }
+  host.innerHTML = cands.map((c,i)=>
+    '<button class="cand'+(AS.cand===i?' sel':'')+'" data-cand="'+i+'">'+
+    '<img src="'+c.thumb+'" alt="candidate '+(i+1)+'">'+
+    '<div class="lbl">'+c.cols+' cols</div></button>').join('');
+  $$('#assistCands .cand').forEach(b=>b.addEventListener('click', ()=>asChoose(+b.dataset.cand)));
+}
+
+async function asChoose(i){
+  AS.cand = i;
+  asRenderCands();
+  const pg = AS.pages.find(p=>p.page === AS.page);
+  const c = pg && pg.candidates[i];
+  if(!c) return;
+  asShowStatus('Enlarging that table\u2026');
+  const r = await window.strandline.cropRegion({ pdfPath: AS.pdf, page: AS.page, box: c.box });
+  if(r.error){ asShowStatus('Could not crop that region: '+esc(r.error), 'stop'); return; }
+  asShowStatus('');
+  $('#assistImg').src = r.image;
+  $('#assistWork').style.display = '';
+  if(!AS.rows.length) AS.rows = [];
+  asRenderTable();
+  asRenderSummary();
+  $('#assistWork').scrollIntoView({ block:'start' });
+}
+
 /* ---------- desktop (Electron) ----------
    The same page runs as the artifact, the iOS app and the office desktop app.
    Only the desktop build has a preload bridge, so these controls appear there
@@ -3229,7 +3487,8 @@ function renderProject(){
 
   renderFormList();
   renderBuildings();
-  if(isDesktop()){ const oc = $('#officeCard'); if(oc) oc.style.display = ''; }
+  if(isDesktop()){ const oc = $('#officeCard'); if(oc) oc.style.display = '';
+    const ac = $('#assistCard'); if(ac) ac.style.display = ''; }
 }
 
 function renderFormList(){
@@ -3911,9 +4170,91 @@ function init(){
     if(panel==='tendons') renderTendons();
     if(panel==='review') renderReview();
   });
+  /* ---------- assisted entry ---------- */
+  if(isDesktop()){
+    $('#assistPick').addEventListener('click', async ()=>{
+      const pdf = await window.strandline.pickPdf();
+      if(!pdf) return;
+      AS.pdf = pdf; AS.pages = []; AS.page = null; AS.cand = null; AS.rows = [];
+      $('#assistPages').style.display = 'none';
+      $('#assistWork').style.display = 'none';
+      $('#assistReset').style.display = '';
+      asShowStatus('Reading the sheets\u2026');
+      const stop = window.strandline.onScanProgress(m=>{
+        if(m.phase === 'start') asShowStatus('Scanning '+m.pages+' sheets for ruled tables\u2026');
+        else if(m.phase === 'page') asShowStatus('Sheet '+m.page+' of '+m.of+'\u2026');
+      });
+      let res;
+      try{ res = await window.strandline.scanPlans({ pdfPath: pdf }); }
+      finally{ stop(); }
+      if(res.error){ asShowStatus('<strong>Could not read that PDF.</strong> '+esc(res.error), 'stop'); return; }
+      AS.pages = res.pages;
+      const total = res.pages.reduce((a,p)=>a+p.candidates.length,0);
+      if(!total){
+        asShowStatus('<strong>No ruled tables found.</strong> If the schedule is on a scanned sheet '+
+          'with no ruled box, enter the rows with the paste box on a form instead.', 'stop');
+        return;
+      }
+      asShowStatus('Found '+total+' table'+(total===1?'':'s')+' across '+
+        res.pages.filter(p=>p.candidates.length).length+' sheet'+
+        (res.pages.filter(p=>p.candidates.length).length===1?'':'s')+
+        '. Pick the schedule below.');
+      asRenderPages();
+    });
+    $('#assistReset').addEventListener('click', ()=>{
+      AS.pdf = null; AS.pages = []; AS.page = null; AS.cand = null; AS.rows = [];
+      $('#assistPages').style.display = 'none';
+      $('#assistWork').style.display = 'none';
+      $('#assistReset').style.display = 'none';
+      asShowStatus('');
+    });
+    $('#assistPage').addEventListener('change', e=>{
+      AS.page = +e.target.value; AS.cand = null;
+      $('#assistWork').style.display = 'none';
+      asRenderCands();
+    });
+    $('#assistAddRow').addEventListener('click', ()=>{ AS.rows.push(asBlankRow()); asRenderTable(); });
+    $('#assistPaste').addEventListener('click', ()=>{
+      const b = $('#assistPasteBox');
+      b.style.display = b.style.display === 'none' ? '' : 'none';
+      if(b.style.display === '') b.focus();
+    });
+    $('#assistPasteBox').addEventListener('input', ()=>{
+      const lines = $('#assistPasteBox').value.split(/\r?\n/).filter(l=>l.trim());
+      if(!lines.length) return;
+      AS.rows = lines.map(l=>{
+        const c = l.split(/\t|\s{2,}|,/).map(x=>x.trim());
+        return { bundle:c[0]||'', qtyFt:c[1]||'', elong:c[2]||'' };
+      });
+      asRenderTable(); asRenderSummary();
+    });
+    $('#assistCreate').addEventListener('click', ()=>{
+      const p = proj();
+      if(!p){ toast('Open a project first'); return; }
+      const { tendons, problems, statedTotal } = asExpand();
+      if(!tendons.length){ toast('Nothing entered yet'); return; }
+      const errs = problems.filter(x=>x.level==='error');
+      if(errs.length && !confirm(errs.length+' row'+(errs.length===1?'':'s')+
+        ' disagree with the sheet. Create the form anyway?\n\n'+
+        errs.slice(0,6).map(e=>'- '+e.msg).join('\n'))) return;
+      const r = newFormForBuilding(p, p.name || 'Schedule');
+      r.recName = 'From the plans';
+      r.tendons = tendons.map(t=>Object.assign(blankTendon(t.mark), {
+        strands: 1, len: t.len, calc: t.calc, anchor: t.anchor
+      }));
+      p.records.push(r);
+      DB.active = r.id;
+      save(); renderProject(); renderFormList();
+      toast(tendons.length+' tendons added'+(statedTotal && statedTotal!==tendons.length ?
+        ' \u2014 quantities disagree, check it' : ''));
+      $('#assistWork').scrollIntoView({ block:'start' });
+    });
+  }
+
   /* ---------- desktop controls ---------- */
   if(isDesktop()){
     const oc = $('#officeCard'); if(oc) oc.style.display = '';
+    const ac = $('#assistCard'); if(ac) ac.style.display = '';
     officeRefreshSettings();
     $('#officeRead').addEventListener('click', officeReadPlans);
     $('#officeKey').addEventListener('click', () => {

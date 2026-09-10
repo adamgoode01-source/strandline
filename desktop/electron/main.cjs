@@ -156,7 +156,7 @@ app.whenReady().then(() => {
       await runDiag(win, process.env.STRANDLINE_DIAG, process.env.STRANDLINE_DIAG_OUT || "diag.json");
       app.exit(0);
     }, 1500));
-    setTimeout(() => app.exit(1), 60000);
+    setTimeout(() => app.exit(1), 180000);
   }
   if (process.env.STRANDLINE_SMOKE) {
     const wc = win.webContents;
@@ -261,5 +261,71 @@ ipcMain.handle('sync-request', async (e, { url, token, path: p, method, body }) 
     return { status: res.status, ok: res.ok, body: json, raw: json ? undefined : text.slice(0, 400) };
   } catch (err) {
     return { error: err.message };
+  }
+});
+
+/* ---------------- assisted entry: local, no API ---------------- */
+
+/* Scans a plan set for ruled tables and returns thumbnails of the candidates.
+   Rendering and detection are both local; nothing leaves the machine. */
+ipcMain.handle('scan-plans', async (e, { pdfPath }) => {
+  if (!pdfPath || !fs.existsSync(pdfPath)) return { error: 'That file could not be found.' };
+  const send = (msg) => { try { win && win.webContents.send('scan-progress', msg); } catch (err) {} };
+  try {
+    const r = await import(pathToFileURL(path.join(__dirname, '..', 'render.mjs')).href);
+    const d = await import(pathToFileURL(path.join(__dirname, '..', 'table-detect.mjs')).href);
+    const sharp = require(path.join(__dirname, '..', 'node_modules', 'sharp'));
+    const doc = await r.openPdf(pdfPath);
+    send({ phase: 'start', pages: doc.numPages });
+    const pages = [];
+    for (let p = 1; p <= doc.numPages; p++) {
+      send({ phase: 'page', page: p, of: doc.numPages });
+      /* Rendered at the scale detection was tuned and verified at. A lower
+         scale scans faster but lost the Prado Lofts schedule entirely - thin
+         rules do not survive the extra downscale - and a candidate the
+         operator never sees is worse than a slower scan. */
+      const { png } = await r.renderPage(doc, p, 2.0);
+      const det = await d.detectTables(png);
+      const meta = await sharp(png).metadata();
+      const cands = [];
+      for (const t of det.tables.slice(0, 4)) {
+        const thumb = await sharp(png).extract({
+          left: Math.max(0, Math.round(meta.width * t.box.x)),
+          top: Math.max(0, Math.round(meta.height * t.box.y)),
+          width: Math.max(8, Math.round(meta.width * t.box.w)),
+          height: Math.max(8, Math.round(meta.height * t.box.h))
+        }).resize(300, 300, { fit: 'inside' }).jpeg({ quality: 78 }).toBuffer();
+        cands.push({ box: t.box, cols: t.cols, ink: t.ink,
+                     thumb: 'data:image/jpeg;base64,' + thumb.toString('base64') });
+      }
+      pages.push({ page: p, candidates: cands });
+    }
+    send({ phase: 'done' });
+    return { pages };
+  } catch (err) {
+    return { error: (err && err.message) || String(err) };
+  }
+});
+
+/* A high-resolution crop of the chosen region, for reading off the screen. */
+ipcMain.handle('crop-region', async (e, { pdfPath, page, box }) => {
+  if (!pdfPath || !fs.existsSync(pdfPath)) return { error: 'That file could not be found.' };
+  try {
+    const r = await import(pathToFileURL(path.join(__dirname, '..', 'render.mjs')).href);
+    const sharp = require(path.join(__dirname, '..', 'node_modules', 'sharp'));
+    const doc = await r.openPdf(pdfPath);
+    const { png } = await r.renderPage(doc, page, 4.0);
+    const meta = await sharp(png).metadata();
+    const pad = 0.006;
+    const x = Math.max(0, box.x - pad), y = Math.max(0, box.y - pad);
+    const w = Math.min(1 - x, box.w + pad * 2), h = Math.min(1 - y, box.h + pad * 2);
+    const jpeg = await sharp(png).extract({
+      left: Math.round(meta.width * x), top: Math.round(meta.height * y),
+      width: Math.max(8, Math.round(meta.width * w)), height: Math.max(8, Math.round(meta.height * h))
+    }).resize(1400, null, { fit: 'inside', kernel: 'lanczos3', withoutEnlargement: false })
+      .jpeg({ quality: 92 }).toBuffer();
+    return { image: 'data:image/jpeg;base64,' + jpeg.toString('base64') };
+  } catch (err) {
+    return { error: (err && err.message) || String(err) };
   }
 });

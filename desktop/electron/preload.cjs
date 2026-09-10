@@ -20,6 +20,15 @@ contextBridge.exposeInMainWorld('strandline', {
   },
 
   readPlans: opts => ipcRenderer.invoke('read-plans', opts),
+
+  // Assisted entry: scanning and cropping are local, no API involved.
+  scanPlans: opts => ipcRenderer.invoke('scan-plans', opts),
+  cropRegion: opts => ipcRenderer.invoke('crop-region', opts),
+  onScanProgress: cb => {
+    const h = (e, msg) => cb(msg);
+    ipcRenderer.on('scan-progress', h);
+    return () => ipcRenderer.removeListener('scan-progress', h);
+  },
   onReadProgress: cb => {
     const h = (e, msg) => cb(msg);
     ipcRenderer.on('read-progress', h);
