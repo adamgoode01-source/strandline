@@ -4,7 +4,7 @@
 #   Team settings > Integrations > Apple Developer Portal -> add your App Store Connect
 #   API key (Issuer ID, Key ID, .p8 file). The name given to that key must match
 #   the `app_store_connect:` value under `integrations` below, exactly.
-#   Currently set to: PT Elongation App Manager
+#   Currently set to: [Expo] EAS Submit 4J7WIh3UrO
 #
 # Docs: https://docs.codemagic.io/yaml-quick-start/building-a-native-ios-app/
 
@@ -19,7 +19,10 @@ workflows:
       # character. Find it at: Teams > (your team) > Integrations > Developer
       # Portal > Manage keys - it is the "Name" column, which is the name given
       # to the App Store Connect API key when it was added to Codemagic.
-      app_store_connect: PT Elongation App Manager
+      # Quoted deliberately: the value starts with "[", which unquoted YAML
+      # parses as the beginning of a flow sequence (an array) and the file
+      # fails to load.
+      app_store_connect: "[Expo] EAS Submit 4J7WIh3UrO"
 
     environment:
       vars:
