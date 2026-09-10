@@ -264,7 +264,9 @@ async function extractPdfText(bytes, inflate, scanContent) {
       }
       return out || text;
     });
-    for (const it of pageItems) items.push(it);
+    // Coordinates are page-relative, so items from different sheets collide
+    // if they are pooled. Tag them or row clustering mixes sheets together.
+    for (const it of pageItems) { it.page = pagesRead; items.push(it); }
   }
 
   // Shift detection has to be per font, not per document. A submittal often

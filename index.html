@@ -2635,7 +2635,9 @@ async function extractPdfText(bytes, inflate, scanContent) {
       }
       return out || text;
     });
-    for (const it of pageItems) items.push(it);
+    // Coordinates are page-relative, so items from different sheets collide
+    // if they are pooled. Tag them or row clustering mixes sheets together.
+    for (const it of pageItems) { it.page = pagesRead; items.push(it); }
   }
 
   // Shift detection has to be per font, not per document. A submittal often
@@ -2668,7 +2670,7 @@ async function extractPlanText(buf){
   // Cluster per page so a schedule on one sheet is not mixed with another's.
   const byPage = new Map();
   for(const it of res.items){
-    const k = Math.round(it.y / 4000);
+    const k = it.page == null ? 0 : it.page;
     if(!byPage.has(k)) byPage.set(k, []);
     byPage.get(k).push(it);
   }
