@@ -32,7 +32,9 @@ ESC['('] = '(';
 ESC[')'] = ')';
 ESC[BS] = BS;
 
-function scanContent(content) {
+// decode(text, fontName) is optional: subset fonts remap character codes, so
+// the caller supplies the font's own table when it has one.
+function scanContent(content, decode) {
   const items = [];
   const n = content.length;
   let i = 0;
@@ -40,7 +42,7 @@ function scanContent(content) {
   let ctm = IDENT.slice();
   const gs = [];
   let tm = null, tlm = null;
-  let leading = 0, size = 0, charSp = 0, hscale = 1;
+  let leading = 0, size = 0, charSp = 0, hscale = 1, font = null;
 
   const nums = k => {
     const v = [];
@@ -50,9 +52,10 @@ function scanContent(content) {
 
   function emit(text) {
     if (!tm || !text) return;
+    if (decode) { text = decode(text, font); if (!text) return; }
     const m = mul(tm, ctm);
     const sc = Math.hypot(m[0], m[1]) || 1;
-    items.push({ x: m[4], y: m[5], text: text, size: (size * sc) || size || 1 });
+    items.push({ x: m[4], y: m[5], text: text, size: (size * sc) || size || 1, font: font });
     // No font metrics here, so advance on an average glyph width. It only has
     // to be good enough to decide whether two fragments share a cell.
     const w = text.length * 0.5 * size * hscale + text.length * charSp;
@@ -149,7 +152,11 @@ function scanContent(content) {
       case 'cm': { const v = nums(6); if (v.length === 6) ctm = mul(v, ctm); break; }
       case 'BT': tm = IDENT.slice(); tlm = IDENT.slice(); break;
       case 'ET': tm = null; tlm = null; break;
-      case 'Tf': { const v = nums(1); if (v.length) size = v[0]; break; }
+      case 'Tf': {
+        const v = nums(1); if (v.length) size = v[0];
+        for (const o of ops) if (o.t === 'name') font = o.v;
+        break;
+      }
       case 'TL': { const v = nums(1); if (v.length) leading = v[0]; break; }
       case 'Tc': { const v = nums(1); if (v.length) charSp = v[0]; break; }
       case 'Tz': { const v = nums(1); if (v.length) hscale = v[0] / 100; break; }
