@@ -43,3 +43,7 @@ server/*.sqlite-wal
 server/*.sqlite-shm
 server/tokens.json
 server/server.log
+
+# bundled OCR language data: 3.9 MB binary, re-fetchable, and the local OCR
+# path it was for is not in use
+desktop/tessdata/

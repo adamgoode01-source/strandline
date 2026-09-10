@@ -15,7 +15,8 @@
   "dependencies": {
     "@napi-rs/canvas": "^1.0.9",
     "pdfjs-dist": "^6.3.289",
-    "sharp": "^0.34.0"
+    "sharp": "^0.34.0",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "electron": "^44.3.0"
