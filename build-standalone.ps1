@@ -26,6 +26,31 @@ if ($i -lt 0) { throw 'Could not find </style> in index.html — layout changed,
 $head = $raw.Substring(0, $i + $marker.Length)
 $body = $raw.Substring($i + $marker.Length)
 
+# Swap the Google Fonts <link> for the inlined faces. The Artifact runs online
+# and its CSP already allows Google Fonts, so index.html keeps the link and
+# stays editable; the offline targets - the local file and the iOS bundle -
+# get the fonts baked in, because a job site has no signal and the fallback
+# to system fonts looks wrong.
+$fontCss = Join-Path $here 'tools/fonts.css'
+if (Test-Path $fontCss) {
+  $faces = [System.IO.File]::ReadAllText($fontCss, (New-Object System.Text.UTF8Encoding($false)))
+  $startTag = '<link rel="preconnect" href="https://fonts.googleapis.com">'
+  $endMark  = 'display=swap">'
+  $a = $head.IndexOf($startTag)
+  $b = $head.IndexOf($endMark)
+  if ($a -ge 0 -and $b -gt $a) {
+    $before = $head.Substring(0, $a)
+    $after  = $head.Substring($b + $endMark.Length)
+    $head = $before + "<style>`n" + $faces + "</style>" + $after
+    $fontKb = [math]::Round($faces.Length / 1KB)
+    Write-Output "Inlined $fontKb KB of fonts (offline-capable)"
+  } else {
+    Write-Warning 'Could not find the Google Fonts link block - fonts NOT inlined.'
+  }
+} else {
+  Write-Warning 'tools/fonts.css missing - run: node tools/bundle-fonts.js'
+}
+
 $out = @"
 <!doctype html>
 <html lang="en">
