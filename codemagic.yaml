@@ -23,18 +23,11 @@ workflows:
 
     environment:
       vars:
+        BUNDLE_ID: "com.jcconcrete.strandline"
         XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
       node: 24
       xcode: latest
-
-      # Automatic code signing. Combined with the integration above, Codemagic
-      # fetches (or creates) the distribution certificate and provisioning
-      # profile and applies them before the scripts run - so there is no
-      # keychain or fetch-signing-files step to write by hand.
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.jcconcrete.strandline
 
     cache:
       cache_paths:
@@ -53,6 +46,25 @@ workflows:
           # Codemagic's per-project counter guarantees a build number App Store
           # Connect has not seen before, which it rejects duplicates of.
           agvtool new-version -all "$(($BUILD_NUMBER + 1))"
+
+      - name: Show what Apple actually has for this account
+        script: |
+          # Diagnostic. Whatever this prints is the truth about the account -
+          # if the bundle id is absent or spelled differently, it shows here.
+          echo "--- bundle ids visible to this API key ---"
+          app-store-connect list-bundle-ids --json || true
+          echo "--- distribution certificates ---"
+          app-store-connect list-certificates --type IOS_DISTRIBUTION --json || true
+
+      - name: Fetch or create signing files
+        script: |
+          keychain initialize
+          # --create makes the provisioning profile (and a distribution
+          # certificate) when none exists yet, which is the normal state for a
+          # brand new App ID. Plain automatic signing only fetches.
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
 
       - name: Build the ipa
         script: |
