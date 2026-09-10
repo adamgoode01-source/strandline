@@ -1,0 +1,19 @@
+{
+  "name": "strandline-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Office-side plan reader for Strandline PT",
+  "type": "module",
+  "bin": {
+    "read-plans": "./read-plans.mjs"
+  },
+  "scripts": {
+    "read": "node read-plans.mjs",
+    "test": "node test-reader.mjs"
+  },
+  "dependencies": {
+    "pdfjs-dist": "^6.3.289",
+    "@napi-rs/canvas": "^1.0.9",
+    "sharp": "^0.34.0"
+  }
+}

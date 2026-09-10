@@ -33,3 +33,13 @@ certificate_private_key*
 # local scratch
 .DS_Store
 Thumbs.db
+
+# desktop reader and sync server
+desktop/node_modules/
+desktop/out/
+server/node_modules/
+server/*.sqlite
+server/*.sqlite-wal
+server/*.sqlite-shm
+server/tokens.json
+server/server.log

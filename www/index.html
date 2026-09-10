@@ -499,6 +499,11 @@ hr.r{border:0;border-top:1px solid var(--rule);margin:14px 0}
 .homehead p{margin:2px 0 0;color:var(--ink-3);font-size:12px;
   text-transform:uppercase;letter-spacing:.08em}
 .crumb{padding:12px 20px 0}
+.syncbar{padding:8px 20px 0;color:var(--ink-3);font-size:11px;
+  text-transform:uppercase;letter-spacing:.07em;font-family:var(--f-cond);font-weight:600}
+.syncbar b{color:var(--ink-2)}
+.syncbar .warn{color:var(--warn)}
+.syncbar .bad{color:var(--bad)}
 .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;padding:18px 20px}
 .pcard{border:1px solid var(--rule);background:var(--card);border-radius:2px;padding:14px;
   cursor:pointer;text-align:left;display:block;width:100%;font:inherit;color:inherit;
@@ -539,8 +544,38 @@ hr.r{border:0;border-top:1px solid var(--rule);margin:14px 0}
           <p>Tendon elongation &amp; lift-off records</p>
         </div>
       </div>
-      <button class="btn primary" id="newProject">+ New project</button>
+      <div class="btnrow">
+        <button class="btn ghost" id="importProj">Import plan file</button>
+        <input type="file" id="importProjFile" accept="application/json,.json" style="display:none">
+        <button class="btn ghost" id="syncNow">Sync</button>
+        <button class="btn ghost sm" id="syncSetup">Server</button>
+        <button class="btn primary" id="newProject">+ New project</button>
+      </div>
     </div>
+    <div class="syncbar" id="syncBar"></div>
+
+    <div class="card" id="syncCard" style="display:none">
+      <h3>Sync server</h3>
+      <div class="body">
+        <div class="note">The office pushes schedules; this device pulls them and pushes back what the
+          crew measured. The server will not let a field token alter a calculated elongation, a tendon
+          length, or an acceptance tolerance &mdash; only the office can change what the work is judged against.</div>
+        <div class="grid g2" style="margin-top:12px">
+          <label class="f"><span>Server address</span>
+            <input id="syncUrl" placeholder="https://strandline-sync.fly.dev" inputmode="url"
+                   autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+          <label class="f"><span>Device token</span>
+            <input id="syncToken" placeholder="slp_..." autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+        </div>
+        <div class="btnrow" style="margin-top:12px">
+          <button class="btn primary" id="syncSave">Save</button>
+          <button class="btn ghost" id="syncTest">Test connection</button>
+          <button class="btn ghost danger" id="syncForget">Forget</button>
+        </div>
+        <div id="syncMsg" style="margin-top:10px"></div>
+      </div>
+    </div>
+
     <div id="projGrid"></div>
   </section>
 
@@ -2736,6 +2771,210 @@ function candidateMarks(tokens){
 let plan = null;   // {name,size,pageCount,tokens,cands,url}
 let panel = 'setup';
 
+/* ---------- import a project read off the plans ----------
+   The office reader (desktop/read-plans.mjs) writes a project file: the
+   schedule as transcribed, already expanded to one row per tendon. Warnings
+   travel with it and are shown rather than swallowed, because a reader
+   warning is usually the one row somebody has to go and check. */
+function importProjectBundle(data){
+  if(!data || data.kind !== 'project' || !Array.isArray(data.forms))
+    throw new Error('that is not a Strandline plan file');
+  const p = blankProject((data.project && data.project.name) || 'Imported project');
+  p.jobNo = (data.project && data.project.jobNo) || '';
+  if(data.source) p.plan = { name: data.source.file || 'plan set', pageCount: null,
+                             buildings: (data.source.buildings || []).map(b=>[b,1]) };
+  data.forms.forEach(f=>{
+    const r = newFormForBuilding(p, f.bldg || f.name || 'Schedule');
+    r.recName = f.name || r.recName;
+    r.pour = f.pour || '';
+    if(f.shopDwg) r.shopDwg = f.shopDwg;
+    r.tendons = (f.tendons||[]).map(t=>Object.assign(blankTendon(String(t.mark||'')), {
+      loc: t.loc || '', grp: t.grp || '',
+      strands: num(t.strands) > 0 ? num(t.strands) : 1,
+      len: t.len == null ? '' : String(t.len),
+      calc: t.calc == null ? '' : String(t.calc),
+      anchor: t.anchor || '',
+      notes: t.notes || ''
+    }));
+    p.records.push(r);
+  });
+  DB.projects.push(p);
+  DB.activeProject = p.id;
+  DB.active = null;
+  save();
+  return { project: p, warnings: data.warnings || [] };
+}
+
+/* ---------- sync ----------
+   Push, then pull. Pushing first means a local edit is never lost to an
+   incoming copy, and the server's revision check refuses a push based on a
+   stale copy rather than letting it overwrite. Server revisions are kept
+   alongside each project and record so a conflict can be detected offline.
+
+   Settings live outside the record store: a device token is device
+   configuration, not part of any job's evidence. */
+const SYNC_KEY = 'strandline.sync.v1';
+function syncCfg(){
+  try{ return JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; }catch(e){ return {}; }
+}
+function saveSyncCfg(c){
+  try{ localStorage.setItem(SYNC_KEY, JSON.stringify(c)); }
+  catch(e){ toast('This browser will not store the server settings'); }
+}
+// Written without a regex: an escaped slash inside a literal has been
+// mangled by tooling here before, and a silently broken URL is worse than
+// a few extra lines.
+function trimTrailingSlash(u){
+  let t = String(u == null ? '' : u).trim();
+  while(t.length && t.charAt(t.length-1) === '/') t = t.slice(0, -1);
+  return t;
+}
+function stripScheme(u){
+  const t = String(u == null ? '' : u).trim();
+  const i = t.indexOf('://');
+  return i < 0 ? t : t.slice(i + 3);
+}
+function syncBase(){
+  return trimTrailingSlash(syncCfg().url || '');
+  return u;
+}
+async function syncFetch(path, opts){
+  const cfg = syncCfg();
+  if(!cfg.url || !cfg.token) throw new Error('no server configured');
+  const res = await fetch(syncBase()+path, Object.assign({
+    headers: { 'authorization':'Bearer '+cfg.token, 'content-type':'application/json' }
+  }, opts||{}));
+  if(res.status === 401) throw new Error('token rejected');
+  if(res.status === 403) throw new Error('this device is not permitted to do that');
+  if(!res.ok) throw new Error('server said '+res.status);
+  return res.json();
+}
+
+async function syncPush(){
+  let pushed = 0, conflicts = 0;
+  for(const p of DB.projects){
+    if(p.deleted) continue;
+    try{
+      const r = await syncFetch('/v1/projects', { method:'POST', body: JSON.stringify({
+        id:p.id, name:p.name, jobNo:p.jobNo, defaults:p.defaults,
+        plan: p.plan ? { name:p.plan.name, pageCount:p.plan.pageCount, buildings:p.plan.buildings } : null,
+        baseRev: p.srev
+      })});
+      p.srev = r.rev;
+    }catch(e){
+      // A field token cannot create projects; that is expected, not a failure.
+      if(!/not permitted/.test(e.message)) throw e;
+    }
+    if(!p.records.length) continue;
+
+    /* A conflict means the record moved on elsewhere - typically the office
+       revising a schedule while a crew was recording against it. Taking the
+       server copy at that point would throw away whatever this device just
+       did, so instead adopt the server's revision and send our own fields
+       again. The server merges by role, so a retry cannot overwrite the other
+       side's half; it only re-applies ours on top of the newer copy. */
+    let toSend = p.records.slice();
+    for(let attempt = 0; attempt < 2 && toSend.length; attempt++){
+      const body = { records: toSend.map(rec=>({ id:rec.id, baseRev:rec.srev, record:rec })) };
+      const r = await syncFetch('/v1/projects/'+encodeURIComponent(p.id)+'/records',
+        { method:'POST', body: JSON.stringify(body) });
+      const retry = [];
+      (r.results||[]).forEach(res=>{
+        const local = p.records.find(x=>x.id===res.id);
+        if(!local) return;
+        if(res.status === 'conflict'){
+          local.srev = res.rev;
+          if(attempt === 0){ retry.push(local); return; }
+          // Still conflicting after a retry means something is changing it
+          // faster than we can push. Take the server copy and say so, rather
+          // than looping.
+          conflicts++;
+          if(res.record) Object.assign(local, res.record);
+        } else {
+          local.srev = res.rev; pushed++;
+          if(res.unknownMarks && res.unknownMarks.length)
+            toast('Not on the schedule, so not saved: '+res.unknownMarks.join(', '));
+        }
+      });
+      toSend = retry;
+    }
+  }
+  return { pushed, conflicts };
+}
+
+async function syncPull(){
+  const cfg = syncCfg();
+  const since = cfg.lastPull || '1970-01-01T00:00:00.000Z';
+  const data = await syncFetch('/v1/changes?since='+encodeURIComponent(since));
+  let projects = 0, forms = 0;
+  (data.projects||[]).forEach(sp=>{
+    let p = DB.projects.find(x=>x.id===sp.id);
+    if(sp.deleted){ if(p) DB.projects = DB.projects.filter(x=>x.id!==sp.id); return; }
+    if(!p){ p = blankProject(sp.name); p.id = sp.id; DB.projects.push(p); }
+    p.name = sp.name; p.jobNo = sp.jobNo || '';
+    p.defaults = Object.assign(p.defaults||{}, sp.defaults||{});
+    p.srev = sp.rev;
+    projects++;
+  });
+  (data.records||[]).forEach(sr=>{
+    const p = DB.projects.find(x=>x.id===sr.projectId);
+    if(!p) return;
+    if(sr.deleted){ p.records = p.records.filter(x=>x.id!==sr.id); return; }
+    const idx = p.records.findIndex(x=>x.id===sr.id);
+    const rec = Object.assign(blankRecord(), sr.record, { id: sr.id, srev: sr.rev });
+    if(idx < 0) p.records.push(rec); else p.records[idx] = rec;
+    forms++;
+  });
+  cfg.lastPull = data.now;
+  saveSyncCfg(cfg);
+  return { projects, forms };
+}
+
+let syncing = false;
+async function syncNow(){
+  if(syncing) return;
+  const cfg = syncCfg();
+  if(!cfg.url || !cfg.token){ $('#syncCard').style.display=''; toast('Enter the server address and token'); return; }
+  syncing = true;
+  renderSyncBar('Syncing...');
+  try{
+    const up = await syncPush();
+    const down = await syncPull();
+    save();
+    const c = syncCfg();
+    c.lastOk = new Date().toISOString();
+    c.lastError = null;
+    saveSyncCfg(c);
+    if(DB.view==='home') renderHome();
+    if(DB.view==='project') renderProject();
+    toast('Synced: '+up.pushed+' sent, '+down.forms+' received'+
+      (up.conflicts ? ', '+up.conflicts+' merged from the server' : ''));
+  }catch(e){
+    const c = syncCfg(); c.lastError = e.message; saveSyncCfg(c);
+    toast('Sync failed: '+e.message);
+  }finally{
+    syncing = false;
+    renderSyncBar();
+  }
+}
+
+function renderSyncBar(status){
+  const el = $('#syncBar');
+  if(!el) return;
+  const c = syncCfg();
+  if(status){ el.innerHTML = esc(status); return; }
+  if(!c.url || !c.token){ el.innerHTML = 'Not connected to a server &mdash; this device is working on its own.'; return; }
+  const host = stripScheme(c.url||'');
+  if(c.lastError){ el.innerHTML = '<span class="bad">Last sync failed: '+esc(c.lastError)+'</span>'; return; }
+  if(!c.lastOk){ el.innerHTML = 'Connected to <b>'+esc(host)+'</b> &mdash; not synced yet.'; return; }
+  const mins = Math.round((Date.now()-new Date(c.lastOk).getTime())/60000);
+  const when = mins < 1 ? 'just now' : mins < 60 ? mins+' min ago'
+             : mins < 1440 ? Math.round(mins/60)+' h ago' : Math.round(mins/1440)+' d ago';
+  const stale = mins > 720;
+  el.innerHTML = 'Synced with <b>'+esc(host)+'</b> '+
+    (stale ? '<span class="warn">'+when+'</span>' : when)+'.';
+}
+
 /* ---------- top-level views: home > project > form ---------- */
 function setView(v){
   DB.view = v;
@@ -2743,7 +2982,7 @@ function setView(v){
     const el = $('#s-'+k);
     if(el) el.classList.toggle('on', k===v);
   });
-  if(v==='home')    renderHome();
+  if(v==='home'){ renderHome(); renderSyncBar(); }
   if(v==='project') renderProject();
   if(v==='form'){ renderProjSel(); renderTitleblock(); go(panel||'setup'); }
   window.scrollTo({top:0, behavior:'instant'});
@@ -3502,6 +3741,89 @@ function init(){
     if(panel==='tendons') renderTendons();
     if(panel==='review') renderReview();
   });
+  /* ---------- plan file import ---------- */
+  $('#importProj').addEventListener('click', ()=>$('#importProjFile').click());
+  $('#importProjFile').addEventListener('change', async e=>{
+    const f = e.target.files[0];
+    e.target.value = '';
+    if(!f) return;
+    let res;
+    try{
+      res = importProjectBundle(JSON.parse(await f.text()));
+    }catch(err){
+      toast(err.message || 'Could not read that file');
+      return;
+    }
+    const errs = res.warnings.filter(w=>w.level === 'error');
+    const total = res.project.records.reduce((a,r)=>a+r.tendons.length,0);
+    setView('project');
+    if(errs.length){
+      $('#pjPlanInfo').innerHTML = '<div class="note stop"><strong>'+errs.length+
+        ' row'+(errs.length===1?'':'s')+' must be checked against the drawing before the crew stresses anything.</strong>'+
+        '<ul style="margin:8px 0 0 18px;padding:0">'+
+        errs.map(w=>'<li>'+esc((w.where?w.where+' — ':'')+w.msg)+'</li>').join('')+'</ul></div>';
+    } else {
+      $('#pjPlanInfo').innerHTML = '<div class="note"><strong>Imported '+total+' tendons across '+
+        res.project.records.length+' form'+(res.project.records.length===1?'':'s')+'.</strong> '+
+        'The transcription came off the drawing by machine. Check the elongations against the sheet '+
+        'before stressing &mdash; each one decides whether a tendon passes.</div>';
+    }
+    toast('Imported '+total+' tendons');
+  });
+
+  /* ---------- sync controls ---------- */
+  $('#syncNow').addEventListener('click', syncNow);
+  $('#syncSetup').addEventListener('click', ()=>{
+    const c = $('#syncCard');
+    const showing = c.style.display !== 'none';
+    c.style.display = showing ? 'none' : '';
+    if(!showing){
+      const cfg = syncCfg();
+      $('#syncUrl').value = cfg.url || '';
+      $('#syncToken').value = cfg.token || '';
+      $('#syncMsg').innerHTML = '';
+    }
+  });
+  $('#syncSave').addEventListener('click', ()=>{
+    const url = trimTrailingSlash($('#syncUrl').value);
+    const token = $('#syncToken').value.trim();
+    if(url && url.slice(0,8).toLowerCase() !== 'https:' + '//'){
+      $('#syncMsg').innerHTML = '<div class="note stop"><strong>Use https.</strong> Over plain http the '+
+        'token and every job record travel in the clear, readable by anyone on the same network.</div>';
+      return;
+    }
+    const cfg = syncCfg();
+    cfg.url = url; cfg.token = token; cfg.lastError = null;
+    saveSyncCfg(cfg);
+    $('#syncMsg').innerHTML = '<div class="note ok"><strong>Saved.</strong> Press Sync to pull what the office has posted.</div>';
+    renderSyncBar();
+  });
+  $('#syncTest').addEventListener('click', async ()=>{
+    const url = $('#syncUrl').value;
+    const token = $('#syncToken').value.trim();
+    if(!url || !token){ $('#syncMsg').innerHTML = '<div class="note stop">Enter both the address and the token.</div>'; return; }
+    $('#syncMsg').innerHTML = '<div class="note">Testing...</div>';
+    try{
+      const h = await fetch(url+'/health');
+      if(!h.ok) throw new Error('the server answered '+h.status+' at /health');
+      const r = await fetch(url+'/v1/projects', { headers:{ 'authorization':'Bearer '+token } });
+      if(r.status === 401) throw new Error('the server is reachable but rejected that token');
+      if(!r.ok) throw new Error('the server answered '+r.status);
+      const d = await r.json();
+      $('#syncMsg').innerHTML = '<div class="note ok"><strong>Connected.</strong> '+
+        (d.projects||[]).length+' project'+((d.projects||[]).length===1?'':'s')+' waiting on the server.</div>';
+    }catch(e){
+      $('#syncMsg').innerHTML = '<div class="note stop"><strong>Could not connect.</strong> '+esc(e.message)+'</div>';
+    }
+  });
+  $('#syncForget').addEventListener('click', ()=>{
+    if(!confirm('Forget the server address and token on this device? Records already on it stay where they are.')) return;
+    saveSyncCfg({});
+    $('#syncUrl').value = ''; $('#syncToken').value = '';
+    $('#syncMsg').innerHTML = '<div class="note">Forgotten. This device is working on its own again.</div>';
+    renderSyncBar();
+  });
+
   /* ---------- home / project navigation ---------- */
   $('#newProject').addEventListener('click', ()=>{
     const name = (prompt('Project name (the job)') || '').trim();

@@ -1,0 +1,30 @@
+# fly.io deployment. A volume is required: the database is a file.
+#   fly launch --no-deploy
+#   fly volumes create strandline_data --size 1
+#   fly deploy
+app = "strandline-sync"
+primary_region = "atl"
+
+[build]
+
+[env]
+  PORT = "8787"
+  STRANDLINE_DB = "/data/strandline.sqlite"
+
+[[mounts]]
+  source = "strandline_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/health"

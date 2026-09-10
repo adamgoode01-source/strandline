@@ -1,0 +1,16 @@
+{
+  "name": "strandline-sync",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sync service for Strandline PT: the office pushes projects, the field pulls them and pushes measurements back",
+  "type": "module",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node test-server.mjs"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  },
+  "engines": { "node": ">=22" }
+}
