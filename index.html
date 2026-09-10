@@ -530,6 +530,22 @@ hr.r{border:0;border-top:1px solid var(--rule);margin:14px 0}
     </div>
     <div class="syncbar" id="syncBar"></div>
 
+    <div class="card" id="newProjCard" style="display:none">
+      <h3>New project</h3>
+      <div class="body">
+        <div class="grid g2">
+          <label class="f"><span>Project name (the job)</span>
+            <input id="newProjName" placeholder="Prado Lofts at Meadowbrook"></label>
+          <label class="f"><span>Job number</span>
+            <input id="newProjNo" placeholder="2622560140"></label>
+        </div>
+        <div class="btnrow" style="margin-top:12px">
+          <button class="btn primary" id="newProjCreate">Create</button>
+          <button class="btn ghost" id="newProjCancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <div class="card" id="syncCard" style="display:none">
       <h3>Sync server</h3>
       <div class="body">
@@ -653,7 +669,19 @@ hr.r{border:0;border-top:1px solid var(--rule);margin:14px 0}
 
     <div class="card">
       <h3>Forms <button class="btn sm ghost" id="pjAddForm">+ Add building</button></h3>
-      <div class="body"><div id="formList"></div></div>
+      <div class="body">
+        <div id="addFormRow" style="display:none;margin-bottom:12px">
+          <div class="grid g2">
+            <label class="f"><span>Building or pour name</span>
+              <input id="addFormName" placeholder="Building 3"></label>
+          </div>
+          <div class="btnrow" style="margin-top:10px">
+            <button class="btn primary sm" id="addFormCreate">Add</button>
+            <button class="btn ghost sm" id="addFormCancel">Cancel</button>
+          </div>
+        </div>
+        <div id="formList"></div>
+      </div>
     </div>
   </section>
 
@@ -3148,7 +3176,11 @@ function renderHome(){
   const host = $('#projGrid');
   if(!DB.projects.length){
     host.innerHTML = '<div class="empty"><div class="big">No projects yet.</div>'+
-      'Create one, upload the PT plans, and Strandline builds a form for each building.</div>';
+      'Press <strong>+ New project</strong> above. '+
+      (isDesktop()
+        ? 'Then read the schedule straight off the PT plans — the upload and the reader are both on the project.'
+        : 'Then upload the PT plans on the project, and a form is built for each building.')+
+      '</div>';
     return;
   }
   const cards = DB.projects.slice().sort((a,b)=>(b.created||0)-(a.created||0)).map(p=>{
@@ -4002,15 +4034,35 @@ function init(){
   });
 
   /* ---------- home / project navigation ---------- */
-  $('#newProject').addEventListener('click', ()=>{
-    const name = (prompt('Project name (the job)') || '').trim();
-    if(!name) return;
+  /* Fields in the page rather than window.prompt: Electron does not implement
+     prompt at all, so the desktop app could not create a project and every
+     upload control sits behind having one. */
+  function showNewProject(show){
+    const c = $('#newProjCard');
+    c.style.display = show ? '' : 'none';
+    if(show){
+      $('#newProjName').value = '';
+      $('#newProjNo').value = '';
+      $('#newProjName').focus();
+      c.scrollIntoView({block:'nearest'});
+    }
+  }
+  $('#newProject').addEventListener('click', ()=>showNewProject(true));
+  $('#newProjCancel').addEventListener('click', ()=>showNewProject(false));
+  $('#newProjName').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#newProjCreate').click(); });
+  $('#newProjNo').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#newProjCreate').click(); });
+  $('#newProjCreate').addEventListener('click', ()=>{
+    const name = $('#newProjName').value.trim();
+    if(!name){ toast('Give the project a name'); $('#newProjName').focus(); return; }
     const p = blankProject(name);
+    p.jobNo = $('#newProjNo').value.trim();
     DB.projects.push(p);
     DB.activeProject = p.id;
     DB.active = null;
-    save(); setView('project');
-    toast('Project created — upload the plans next');
+    save();
+    showNewProject(false);
+    setView('project');
+    toast(isDesktop() ? 'Project created — now read the plans' : 'Project created — upload the plans next');
   });
   $('#backHome').addEventListener('click', ()=>{ DB.active=null; setView('home'); });
   $('#backProject').addEventListener('click', ()=>setView('project'));
@@ -4035,13 +4087,21 @@ function init(){
     const p = proj(); if(!p) return;
     p.defaults[el.dataset.pd] = el.value; save();
   }));
-  $('#pjAddForm').addEventListener('click', ()=>{
+  function showAddForm(show){
+    const row = $('#addFormRow');
+    row.style.display = show ? '' : 'none';
+    if(show){ $('#addFormName').value = ''; $('#addFormName').focus(); }
+  }
+  $('#pjAddForm').addEventListener('click', ()=>showAddForm($('#addFormRow').style.display === 'none'));
+  $('#addFormCancel').addEventListener('click', ()=>showAddForm(false));
+  $('#addFormName').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#addFormCreate').click(); });
+  $('#addFormCreate').addEventListener('click', ()=>{
     const p = proj(); if(!p) return;
-    const nm = (prompt('Building or pour name') || '').trim();
-    if(!nm) return;
+    const nm = $('#addFormName').value.trim();
+    if(!nm){ toast('Give the building a name'); $('#addFormName').focus(); return; }
     const r = newFormForBuilding(p, nm);
     p.records.push(r); DB.active = r.id;
-    save(); renderFormList(); renderBuildings();
+    save(); showAddForm(false); renderFormList(); renderBuildings();
     toast('Form created');
   });
   $('#pjBuildDismiss').addEventListener('click', ()=>{ $('#pjBuildCard').style.display='none'; });

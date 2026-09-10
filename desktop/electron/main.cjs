@@ -150,6 +150,14 @@ app.whenReady().then(() => {
   applyCsp();
   createWindow();
   smokeTrace('window created', { page: PAGE, exists: fs.existsSync(PAGE) });
+  if (process.env.STRANDLINE_DIAG) {
+    const { runDiag } = require("./diag.cjs");
+    win.webContents.once("did-finish-load", () => setTimeout(async () => {
+      await runDiag(win, process.env.STRANDLINE_DIAG, process.env.STRANDLINE_DIAG_OUT || "diag.json");
+      app.exit(0);
+    }, 1500));
+    setTimeout(() => app.exit(1), 60000);
+  }
   if (process.env.STRANDLINE_SMOKE) {
     const wc = win.webContents;
     wc.on('console-message', (e, level, msg) => { if (level >= 2) smokeTrace('page console', { level, msg: String(msg).slice(0, 300) }); });
