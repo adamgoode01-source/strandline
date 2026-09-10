@@ -465,6 +465,34 @@ hr.r{border:0;border-top:1px solid var(--rule);margin:14px 0}
   h1{font-size:20px}
   .stat .v{font-size:19px}
 }
+
+/* ---------- home / project screens ---------- */
+.screen{display:none}
+.screen.on{display:block}
+.homehead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;
+  flex-wrap:wrap;padding:22px 20px 16px;border-bottom:1px solid var(--rule)}
+.homehead h1{margin:0}
+.homehead p{margin:2px 0 0;color:var(--ink-3);font-size:12px;
+  text-transform:uppercase;letter-spacing:.08em}
+.crumb{padding:12px 20px 0}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;padding:18px 20px}
+.pcard{border:1px solid var(--rule);background:var(--card);border-radius:2px;padding:14px;
+  cursor:pointer;text-align:left;display:block;width:100%;font:inherit;color:inherit;
+  transition:border-color .12s,transform .12s}
+.pcard:hover{border-color:var(--accent);transform:translateY(-1px)}
+.pcard .nm{font-weight:700;font-size:15px;margin-bottom:2px}
+.pcard .mt{color:var(--ink-3);font-size:11px;text-transform:uppercase;letter-spacing:.07em}
+.pcard .ct{margin-top:10px;display:flex;gap:14px;flex-wrap:wrap}
+.pcard .ct b{font-family:var(--mono);font-size:16px;display:block}
+.pcard .ct span{color:var(--ink-3);font-size:10px;text-transform:uppercase;letter-spacing:.07em}
+.empty{padding:44px 20px;text-align:center;color:var(--ink-3)}
+.empty .big{font-size:16px;color:var(--ink-2);margin-bottom:6px}
+.frow{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--rule);
+  flex-wrap:wrap}
+.frow:last-child{border-bottom:0}
+.frow .nm{font-weight:650;flex:1;min-width:150px}
+.frow .st{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+@media (max-width:900px){ .homehead{padding:16px 13px 13px} .pgrid{padding:14px 13px} .crumb{padding:10px 13px 0} }
 </style>
 </head>
 <body>
@@ -477,6 +505,93 @@ hr.r{border:0;border-top:1px solid var(--rule);margin:14px 0}
     <span>Stressing safety &mdash; clear the live end. No personnel behind or in line with the jack. Enforce the exclusion zone at both ends and keep the safety cage in place until the ram is released.</span>
   </div>
 
+  <!-- ================= HOME ================= -->
+  <section class="screen" id="s-home">
+    <div class="homehead">
+      <div class="brandwrap">
+        <div class="brandmark" aria-hidden="true"><span>S</span></div>
+        <div>
+          <h1>Strandline</h1>
+          <p>Tendon elongation &amp; lift-off records</p>
+        </div>
+      </div>
+      <button class="btn primary" id="newProject">+ New project</button>
+    </div>
+    <div id="projGrid"></div>
+  </section>
+
+  <!-- ================= PROJECT ================= -->
+  <section class="screen" id="s-project">
+    <div class="crumb">
+      <button class="btn sm ghost" id="backHome">&larr; All projects</button>
+    </div>
+    <div class="homehead">
+      <div>
+        <h1 id="pjName">Project</h1>
+        <p id="pjSub"></p>
+      </div>
+      <div class="btnrow">
+        <button class="btn ghost" id="pjSettings">Job settings</button>
+        <button class="btn sm danger" id="pjDelete">Delete project</button>
+      </div>
+    </div>
+
+    <div class="card" id="pjSettingsCard" style="display:none">
+      <h3>Job settings &mdash; shared by every building</h3>
+      <div class="body">
+        <div class="note">Copied into each new form. Changing them here does not rewrite forms
+          that already exist, so a completed record keeps the values it was actually stressed under.</div>
+        <div class="grid g3" style="margin-top:12px">
+          <label class="f"><span>Project name</span><input data-pj="name"></label>
+          <label class="f"><span>Job number</span><input data-pj="jobNo"></label>
+          <label class="f"><span>Stressing contractor</span><input data-pd="company"></label>
+          <label class="f"><span>General contractor</span><input data-pd="gc"></label>
+          <label class="f"><span>PT supplier</span><input data-pd="ptSupplier"></label>
+          <label class="f"><span>Engineer of record</span><input data-pd="eor"></label>
+          <label class="f"><span>Ram area (in&sup2;)</span><input data-pd="ramArea" inputmode="decimal"></label>
+          <label class="f"><span>Gauge correction (%)</span><input data-pd="calPct" inputmode="decimal"></label>
+          <label class="f"><span>Required f'ci (psi)</span><input data-pd="fciReq" inputmode="numeric"></label>
+          <label class="f"><span>Send records to</span><input data-pd="emailTo" inputmode="email"></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Plan set</h3>
+      <div class="body">
+        <div id="pjPlanState"></div>
+        <div class="drop" id="pjDrop" tabindex="0" role="button" style="margin-top:10px">
+          <div class="big">Drop the PT plan PDF here</div>
+          <div class="sm">or tap to choose a file &middot; stays on this device</div>
+        </div>
+        <input type="file" id="pjFile" accept="application/pdf,.pdf" style="display:none">
+        <div id="pjPlanInfo" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <div class="card" id="pjBuildCard" style="display:none">
+      <h3>Buildings found in the plans</h3>
+      <div class="body">
+        <div class="note" id="pjBuildNote"></div>
+        <div class="chips" id="pjBuilds" style="margin-top:10px"></div>
+        <div class="btnrow" style="margin-top:12px">
+          <button class="btn primary" id="pjMakeForms">Create a form for each</button>
+          <button class="btn ghost" id="pjBuildDismiss">Dismiss</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Forms <button class="btn sm ghost" id="pjAddForm">+ Add building</button></h3>
+      <div class="body"><div id="formList"></div></div>
+    </div>
+  </section>
+
+  <!-- ================= FORM ================= -->
+  <section class="screen" id="s-form">
+  <div class="crumb">
+    <button class="btn sm ghost" id="backProject">&larr; <span id="backProjName">Project</span></button>
+  </div>
   <div class="titleblock">
     <div class="tb-top">
       <div class="brandwrap">
@@ -488,7 +603,7 @@ hr.r{border:0;border-top:1px solid var(--rule);margin:14px 0}
       </div>
       <div class="projbar">
         <label class="f" style="min-width:190px">
-          <span>Active record</span>
+          <span>Active form</span>
           <select id="projSel"></select>
         </label>
         <button class="btn sm ghost" id="projNew">New</button>
@@ -878,6 +993,7 @@ hr.r{border:0;border-top:1px solid var(--rule);margin:14px 0}
       </div>
     </section>
   </main>
+  </section>
 </div>
 
 <div id="toast" role="status" aria-live="polite"></div>
@@ -996,27 +1112,68 @@ function blankRecord(name){
   };
 }
 
-let DB = { active:null, records:[] };
+/* A project is a job. It owns the plan set and one form per building, plus the
+   settings every building on that job shares - strand, ram, tolerances. Those
+   are copied into each form when it is created so a form stays a complete,
+   self-contained record of what was actually used. */
+const SHARED_KEYS = ['dia','aps','fpu','eps','jackPct','ramArea','calPct','ramId','gaugeId',
+  'calDate','calExp','fciReq','frictionPct','tolInd','tolGrp','loMin','loMax',
+  'lenMode','den','paper','emailTo','emailCc','company','gc','eor','ptSupplier'];
+
+function blankProject(name){
+  const b = blankRecord();
+  const defaults = {};
+  SHARED_KEYS.forEach(k => defaults[k] = b[k]);
+  return {
+    id: 'p'+Math.random().toString(36).slice(2,10),
+    name: name || 'New project',
+    jobNo: '',
+    created: Date.now(),
+    plan: null,          // {name, size, pageCount, tokens, table, buildings}
+    defaults: defaults,
+    records: []
+  };
+}
+
+let DB = { v:2, projects:[], activeProject:null, active:null, view:'home' };
 
 function load(){
   try{
     const raw = localStorage.getItem(LS_KEY);
     if(raw){
       const p = JSON.parse(raw);
-      if(p && Array.isArray(p.records) && p.records.length){
+      if(p && Array.isArray(p.projects)){
         DB = p;
-        DB.records.forEach(r=>{
-          const b = blankRecord();
-          for(const k in b) if(!(k in r)) r[k]=b[k];
+      } else if(p && Array.isArray(p.records) && p.records.length){
+        // v1 store: one flat list of records. Fold it into a project so nothing
+        // anyone already typed is lost.
+        const first = p.records[0] || {};
+        const proj = blankProject(first.job || 'Imported project');
+        proj.jobNo = first.jobNo || '';
+        SHARED_KEYS.forEach(k => { if(first[k] !== undefined) proj.defaults[k] = first[k]; });
+        proj.records = p.records;
+        DB = { v:2, projects:[proj], activeProject:proj.id, active:p.active || null, view:'home' };
+      }
+      if(DB.projects){
+        DB.v = 2;
+        DB.projects.forEach(pr=>{
+          if(!Array.isArray(pr.records)) pr.records = [];
+          if(!pr.defaults) pr.defaults = blankProject().defaults;
+          pr.records.forEach(r=>{
+            const b = blankRecord();
+            for(const k in b) if(!(k in r)) r[k] = b[k];
+          });
         });
-        if(!DB.records.some(r=>r.id===DB.active)) DB.active = DB.records[0].id;
+        if(!DB.projects.some(x=>x.id===DB.activeProject)) DB.activeProject = null;
+        if(!DB.view) DB.view = 'home';
         return;
       }
     }
   }catch(e){ /* corrupt store: fall through to a fresh one rather than dying */ }
-  const r = blankRecord('New record');
-  DB = { active:r.id, records:[r] };
+  DB = { v:2, projects:[], activeProject:null, active:null, view:'home' };
 }
+function proj(){ return DB.projects.find(p=>p.id===DB.activeProject) || null; }
+function projRecords(){ const p = proj(); return p ? p.records : []; }
 let saveT=null, saveWarned=false;
 function save(){
   clearTimeout(saveT);
@@ -1029,7 +1186,17 @@ function save(){
     }
   }, 200);
 }
-function rec(){ return DB.records.find(r=>r.id===DB.active) || DB.records[0]; }
+// Every caller assumes rec() returns something. Keep that contract even before
+// a project exists, so a stray render on the home screen cannot throw.
+let SCRATCH = null;
+function rec(){
+  const rs = projRecords();
+  const hit = rs.find(r=>r.id===DB.active);
+  if(hit) return hit;
+  if(rs.length) return rs[0];
+  if(!SCRATCH) SCRATCH = blankRecord('Untitled');
+  return SCRATCH;
+}
 
 /* ============================================================
    2. engineering calculations
@@ -1469,7 +1636,15 @@ function buildPdf(r, filled){
   while(i < T.length){
     const remaining = T.length - i;
     if(remaining <= perLast){ pages.push([i, T.length]); i = T.length; }
-    else { pages.push([i, i+perNormal]); i += perNormal; }
+    else {
+      // The last page is shorter because it carries the summary and signature
+      // block, so perNormal > perLast. When the remainder is more than a last
+      // page holds but less than a full page, taking perNormal ran past the
+      // end of the array and PDF generation threw. Always leave at least one
+      // row for the final page.
+      const take = Math.min(perNormal, remaining - 1);
+      pages.push([i, i+take]); i += take;
+    }
   }
   if(!pages.length) pages.push([0,0]);
   const pageCt = pages.length;
@@ -2265,6 +2440,173 @@ function candidateMarks(tokens){
 let plan = null;   // {name,size,pageCount,tokens,cands,url}
 let panel = 'setup';
 
+/* ---------- top-level views: home > project > form ---------- */
+function setView(v){
+  DB.view = v;
+  ['home','project','form'].forEach(k=>{
+    const el = $('#s-'+k);
+    if(el) el.classList.toggle('on', k===v);
+  });
+  if(v==='home')    renderHome();
+  if(v==='project') renderProject();
+  if(v==='form'){ renderProjSel(); renderTitleblock(); go(panel||'setup'); }
+  window.scrollTo({top:0, behavior:'instant'});
+  save();
+}
+
+// How far along each form is, for the project list.
+function formProgress(r){
+  const T = r.tendons || [];
+  const done = T.filter(t=>isFinite(C.net(t))).length;
+  return { total:T.length, done:done,
+           label: !T.length ? 'no tendons' : done+' of '+T.length+' stressed' };
+}
+
+// Resume where the last session left off, but never land on a screen whose
+// underlying record has since been deleted.
+function bootView(){
+  const p = proj();
+  if(p && DB.active && p.records.some(r=>r.id===DB.active)){ setView('form'); return; }
+  if(p){ setView('project'); return; }
+  DB.activeProject = null; DB.active = null;
+  setView('home');
+}
+
+function renderHome(){
+  const host = $('#projGrid');
+  if(!DB.projects.length){
+    host.innerHTML = '<div class="empty"><div class="big">No projects yet.</div>'+
+      'Create one, upload the PT plans, and Strandline builds a form for each building.</div>';
+    return;
+  }
+  const cards = DB.projects.slice().sort((a,b)=>(b.created||0)-(a.created||0)).map(p=>{
+    const forms = p.records.length;
+    const tendons = p.records.reduce((a,r)=>a+(r.tendons?r.tendons.length:0),0);
+    const stressed = p.records.reduce((a,r)=>a+(r.tendons||[]).filter(t=>isFinite(C.net(t))).length,0);
+    return '<button class="pcard" data-open="'+esc(p.id)+'">'+
+      '<div class="nm">'+esc(p.name||'Untitled project')+'</div>'+
+      '<div class="mt">'+esc(p.jobNo||'no job number')+
+        (p.plan? ' &middot; plans loaded':'')+'</div>'+
+      '<div class="ct">'+
+        '<div><b>'+forms+'</b><span>'+(forms===1?'form':'forms')+'</span></div>'+
+        '<div><b>'+tendons+'</b><span>tendons</span></div>'+
+        '<div><b>'+stressed+'</b><span>stressed</span></div>'+
+      '</div></button>';
+  }).join('');
+  host.innerHTML = '<div class="pgrid">'+cards+'</div>';
+  $$('#projGrid .pcard').forEach(b=>b.addEventListener('click', ()=>{
+    DB.activeProject = b.dataset.open;
+    DB.active = null;
+    setView('project');
+  }));
+}
+
+function renderProject(){
+  const p = proj();
+  if(!p){ setView('home'); return; }
+  $('#pjName').textContent = p.name || 'Untitled project';
+  $('#pjSub').textContent = [p.jobNo, p.defaults.gc, p.defaults.company].filter(Boolean).join('  ·  ') || '—';
+  $('#backProjName').textContent = p.name || 'Project';
+
+  $$('#s-project [data-pj]').forEach(el=>{ el.value = p[el.dataset.pj] || ''; });
+  $$('#s-project [data-pd]').forEach(el=>{ el.value = p.defaults[el.dataset.pd] || ''; });
+
+  // transient upload feedback belongs to the upload that produced it, not to
+  // whatever project is opened next
+  $('#pjPlanInfo').innerHTML = '';
+  $('#pjSettingsCard').style.display = 'none';
+  $('#pjPlanState').innerHTML = p.plan
+    ? '<div class="note"><strong>'+esc(p.plan.name)+'</strong> &mdash; '+
+      (p.plan.pageCount||'?')+' page'+(p.plan.pageCount===1?'':'s')+', '+
+      (p.plan.tokens? p.plan.tokens.length : 0)+' text strings read'+
+      (p.plan.table? ', a '+p.plan.table.rows.length+'-row schedule found':', no schedule table recognised')+
+      '. Drop another PDF to replace it.</div>'
+    : '<div class="note">No plans loaded. You can still add buildings by hand.</div>';
+
+  renderFormList();
+  renderBuildings();
+}
+
+function renderFormList(){
+  const p = proj();
+  const host = $('#formList');
+  if(!p || !p.records.length){
+    host.innerHTML = '<div class="note">No forms yet. Upload the plans above, or press '+
+      '<strong>+ Add building</strong>.</div>';
+    return;
+  }
+  host.innerHTML = p.records.map(r=>{
+    const pr = formProgress(r);
+    const complete = pr.total && pr.done === pr.total;
+    return '<div class="frow">'+
+      '<span class="nm">'+esc(r.bldg || r.recName || 'Untitled')+
+        (r.pour? ' <span class="st">'+esc(r.pour)+'</span>':'')+'</span>'+
+      '<span class="st">'+pr.label+'</span>'+
+      (complete? '<span class="pill ok">COMPLETE</span>':'')+
+      '<button class="btn sm" data-open-form="'+esc(r.id)+'">Open</button>'+
+      '<button class="btn sm ghost" data-mail-form="'+esc(r.id)+'">Email</button>'+
+      '</div>';
+  }).join('');
+  $$('#formList [data-open-form]').forEach(b=>b.addEventListener('click', ()=>{
+    DB.active = b.dataset.openForm; panel='setup';
+    fillSetup(); renderTendons(); setView('form');
+  }));
+  $$('#formList [data-mail-form]').forEach(b=>b.addEventListener('click', ()=>{
+    DB.active = b.dataset.mailForm; panel='export';
+    fillSetup(); setView('form');
+  }));
+}
+
+// Buildings are read off the drawing's text layer. This is a guess at names,
+// so it is always shown for confirmation rather than acted on directly.
+const BLDG_RE = /\b(?:BUILDING|BLDG\.?|BLD\.?)\s*[-#]?\s*([A-Z0-9][A-Z0-9-]{0,5})\b/gi;
+function detectBuildings(tokens){
+  const counts = new Map();
+  for(const t of tokens||[]){
+    let m; BLDG_RE.lastIndex = 0;
+    while((m = BLDG_RE.exec(t))){
+      const v = m[1].toUpperCase().replace(/[-.]+$/,'');
+      if(!v || v.length > 6) continue;
+      if(/^(SECTION|PLAN|TYPE|NO|SLAB)$/.test(v)) continue;
+      const name = 'Building '+v;
+      counts.set(name, (counts.get(name)||0)+1);
+    }
+  }
+  return Array.from(counts.entries())
+    .sort((a,b)=> b[1]-a[1] || a[0].localeCompare(b[0], undefined, {numeric:true}))
+    .slice(0, 24);
+}
+
+function renderBuildings(){
+  const p = proj();
+  const list = (p && p.plan && p.plan.buildings) || [];
+  const card = $('#pjBuildCard');
+  if(!list.length){ card.style.display='none'; return; }
+  const existing = new Set(p.records.map(r=>(r.bldg||'').toUpperCase()));
+  card.style.display='';
+  $('#pjBuildNote').innerHTML = '<strong>'+list.length+' building name'+(list.length===1?'':'s')+
+    ' read from the drawing text.</strong> These are pattern matches, not drawing interpretation &mdash; '+
+    'untick anything that is a detail reference rather than a real building, and add any the text layer missed.';
+  $('#pjBuilds').innerHTML = list.map(([nm,n])=>{
+    const already = existing.has(nm.toUpperCase());
+    return '<label class="chip"><input type="checkbox" value="'+esc(nm)+'"'+
+      (already?'':' checked')+(already?' disabled':'')+'> '+esc(nm)+
+      '<span style="color:var(--ink-3);font-size:10px">'+(already?'added':'×'+n)+'</span></label>';
+  }).join('');
+}
+
+// A new form inherits the job settings, so each record stands alone as
+// evidence of what was used on that pour.
+function newFormForBuilding(p, bldg){
+  const r = blankRecord(bldg || 'New form');
+  SHARED_KEYS.forEach(k=>{ if(p.defaults[k] !== undefined && p.defaults[k] !== '') r[k] = p.defaults[k]; });
+  r.job = p.name || '';
+  r.jobNo = p.jobNo || '';
+  r.bldg = bldg || '';
+  r.recName = bldg || 'New form';
+  return r;
+}
+
 function go(p){
   panel = p;
   $$('.panel').forEach(el=>el.classList.toggle('on', el.id==='p-'+p));
@@ -2395,7 +2737,8 @@ function renderFciNote(){
 /* ---------- project selector ---------- */
 function renderProjSel(){
   const sel = $('#projSel');
-  sel.innerHTML = DB.records.map(r=>
+  if(!sel) return;
+  sel.innerHTML = projRecords().map(r=>
     '<option value="'+esc(r.id)+'"'+(r.id===DB.active?' selected':'')+'>'+
     esc(r.recName||'Untitled')+(r.bldg?' — '+esc(r.bldg):'')+'</option>'
   ).join('');
@@ -2749,7 +3092,8 @@ function buildMail(){
   L.push('');
   L.push('Respectfully,');
   L.push('');
-  if((r.company||'').trim()) L.push(q(r.company));
+  if((r.stressedBy||'').trim()) L.push(r.stressedBy.trim());
+  if((r.company||'').trim()) L.push(r.company.trim());
 
   $('#mailSubj').value = subj;
   $('#mailBody').value = L.join('\n');
@@ -2790,7 +3134,8 @@ function csv(){
   const r = rec();
   const q = v => '"'+String(v==null?'':v).replace(/"/g,'""')+'"';
   const L = [];
-  L.push([['Job',r.job],['Job No',r.jobNo],['Building',r.bldg],['Pour',r.pour],['Level',r.level],
+  L.push([['Contractor',r.company],
+          ['Job',r.job],['Job No',r.jobNo],['Building',r.bldg],['Pour',r.pour],['Level',r.level],
           ['Shop Dwg',r.shopDwg],['Ram',r.ramId],['Gauge',r.gaugeId],['Calib',r.calDate],
           ['Aps',r.aps],['fpu',r.fpu],['Eps',r.eps],['Jack %',r.jackPct],['Ram Area',r.ramArea],
           ['Gauge Corr %',r.calPct],['Tol Ind %',r.tolInd],['Tol Grp %',r.tolGrp],
@@ -2849,7 +3194,8 @@ function init(){
   fillSetup();
   renderTitleblock();
   bindSetup();
-  go('setup');
+  panel = 'setup';
+  setTimeout(bootView, 0);
 
   $$('#rail button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.p)));
 
@@ -2860,29 +3206,145 @@ function init(){
     if(panel==='tendons') renderTendons();
     if(panel==='review') renderReview();
   });
+  /* ---------- home / project navigation ---------- */
+  $('#newProject').addEventListener('click', ()=>{
+    const name = (prompt('Project name (the job)') || '').trim();
+    if(!name) return;
+    const p = blankProject(name);
+    DB.projects.push(p);
+    DB.activeProject = p.id;
+    DB.active = null;
+    save(); setView('project');
+    toast('Project created — upload the plans next');
+  });
+  $('#backHome').addEventListener('click', ()=>{ DB.active=null; setView('home'); });
+  $('#backProject').addEventListener('click', ()=>setView('project'));
+  $('#pjSettings').addEventListener('click', ()=>{
+    const c = $('#pjSettingsCard');
+    c.style.display = c.style.display==='none' ? '' : 'none';
+  });
+  $('#pjDelete').addEventListener('click', ()=>{
+    const p = proj(); if(!p) return;
+    const n = p.records.length;
+    if(!confirm('Delete "'+(p.name||'this project')+'" and its '+n+' form'+(n===1?'':'s')+'? This cannot be undone.')) return;
+    DB.projects = DB.projects.filter(x=>x.id!==p.id);
+    DB.activeProject = null; DB.active = null;
+    save(); setView('home'); toast('Project deleted');
+  });
+  $$('#s-project [data-pj]').forEach(el=>el.addEventListener('input', ()=>{
+    const p = proj(); if(!p) return;
+    p[el.dataset.pj] = el.value; save();
+    $('#pjName').textContent = p.name || 'Untitled project';
+  }));
+  $$('#s-project [data-pd]').forEach(el=>el.addEventListener('input', ()=>{
+    const p = proj(); if(!p) return;
+    p.defaults[el.dataset.pd] = el.value; save();
+  }));
+  $('#pjAddForm').addEventListener('click', ()=>{
+    const p = proj(); if(!p) return;
+    const nm = (prompt('Building or pour name') || '').trim();
+    if(!nm) return;
+    const r = newFormForBuilding(p, nm);
+    p.records.push(r); DB.active = r.id;
+    save(); renderFormList(); renderBuildings();
+    toast('Form created');
+  });
+  $('#pjBuildDismiss').addEventListener('click', ()=>{ $('#pjBuildCard').style.display='none'; });
+  $('#pjMakeForms').addEventListener('click', ()=>{
+    const p = proj(); if(!p) return;
+    const picked = $$('#pjBuilds input').filter(b=>b.checked && !b.disabled).map(b=>b.value);
+    if(!picked.length){ toast('Nothing selected'); return; }
+    const existing = new Set(p.records.map(r=>(r.bldg||'').toUpperCase()));
+    let n = 0;
+    picked.forEach(nm=>{
+      if(existing.has(nm.toUpperCase())) return;
+      const r = newFormForBuilding(p, nm);
+      // A single schedule on a single-building set belongs to that building.
+      // With several buildings there is no way to know which rows go where, so
+      // the schedule is left for the person to import per form.
+      if(p.plan && p.plan.table && picked.length === 1){
+        r.tendons = p.plan.table.rows.map(row=>{
+          const t = blankTendon(String(row.mark||'').trim());
+          if(row.loc) t.loc = row.loc;
+          const st = num(row.strands); t.strands = st>0?st:1;
+          if(row.len && isFinite(parseLen(row.len))) t.len = String(row.len).trim();
+          if(row.calc && isFinite(parseLen(row.calc))) t.calc = String(row.calc).trim();
+          return t;
+        });
+      }
+      p.records.push(r); existing.add(nm.toUpperCase()); n++;
+    });
+    save(); renderFormList(); renderBuildings();
+    toast(n+' form'+(n===1?'':'s')+' created');
+  });
+
+  /* ---------- project-level plan upload ---------- */
+  const pjDrop = $('#pjDrop'), pjFile = $('#pjFile');
+  pjDrop.addEventListener('click', ()=>pjFile.click());
+  pjDrop.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); pjFile.click(); } });
+  ['dragenter','dragover'].forEach(ev=>pjDrop.addEventListener(ev, e=>{ e.preventDefault(); pjDrop.classList.add('hot'); }));
+  ['dragleave','drop'].forEach(ev=>pjDrop.addEventListener(ev, e=>{ e.preventDefault(); pjDrop.classList.remove('hot'); }));
+  pjDrop.addEventListener('drop', e=>{ const f=e.dataTransfer.files[0]; if(f) readProjectPlan(f); });
+  pjFile.addEventListener('change', e=>{ const f=e.target.files[0]; if(f) readProjectPlan(f); });
+
+  async function readProjectPlan(f){
+    const p = proj(); if(!p) return;
+    if(!/pdf$/i.test(f.name) && f.type!=='application/pdf'){ toast('Needs to be a PDF'); return; }
+    $('#pjPlanInfo').innerHTML = '<div class="note">Reading <strong>'+esc(f.name)+'</strong>…</div>';
+    let res;
+    try{
+      res = await extractPlanText(await f.arrayBuffer());
+    }catch(e){
+      $('#pjPlanInfo').innerHTML = '<div class="note stop"><strong>Could not read that PDF.</strong> '+
+        'It may be encrypted or malformed. Add buildings by hand instead.</div>';
+      return;
+    }
+    p.plan = { name:f.name, size:f.size, pageCount:res.pageCount,
+               tokens:res.tokens, table:res.table, buildings:detectBuildings(res.tokens) };
+    save();
+    const bits = [];
+    if(!res.tokens.length){
+      bits.push('<div class="note stop"><strong>No text layer.</strong> This is a scanned or flattened '+
+        'drawing, which is normal for PT shop drawings. Nothing can be read off it &mdash; add the buildings '+
+        'by hand and enter the schedule from the drawing.</div>');
+    } else {
+      bits.push('<div class="note"><strong>Read '+res.tokens.length+' text strings.</strong> '+
+        (res.table ? 'A '+res.table.rows.length+'-row tendon schedule was recognised. '
+                   : 'No tendon schedule table was recognised on this set. ')+
+        (p.plan.buildings.length ? p.plan.buildings.length+' building name'+
+            (p.plan.buildings.length===1?'':'s')+' found &mdash; confirm them below.'
+          : 'No building names found; add them by hand.')+'</div>');
+    }
+    renderProject();
+    $('#pjPlanInfo').innerHTML = bits.join('');
+  }
+
   $('#projNew').addEventListener('click', ()=>{
-    const r = blankRecord('New record');
-    DB.records.push(r); DB.active = r.id; save();
+    const p = proj(); if(!p) return;
+    const r = newFormForBuilding(p, '');
+    p.records.push(r); DB.active = r.id; save();
     renderProjSel(); fillSetup(); renderTitleblock(); go('setup');
-    toast('New record created');
+    toast('New form created');
   });
   $('#projDup').addEventListener('click', ()=>{
     const c = JSON.parse(JSON.stringify(rec()));
     c.id = 'r'+Math.random().toString(36).slice(2,10);
     c.recName = (c.recName||'Record')+' (copy)';
     c.tendons.forEach(t=>{ t.apsi=t.mka=t.mkb=t.seat=t.lopsi=t.notes=''; });
-    DB.records.push(c); DB.active = c.id; save();
+    const p = proj(); if(!p) return;
+    p.records.push(c); DB.active = c.id; save();
     renderProjSel(); fillSetup(); renderTitleblock();
     toast('Duplicated — field entries cleared, schedule kept');
   });
   $('#projDel').addEventListener('click', ()=>{
-    if(DB.records.length===1){ toast('Cannot delete the only record'); return; }
+    const p = proj(); if(!p) return;
     const r = rec();
     if(!confirm('Delete "'+(r.recName||'Untitled')+'" and its '+r.tendons.length+' tendon'+(r.tendons.length===1?'':'s')+'? This cannot be undone.')) return;
-    DB.records = DB.records.filter(x=>x.id!==r.id);
-    DB.active = DB.records[0].id; save();
+    p.records = p.records.filter(x=>x.id!==r.id);
+    if(!p.records.length){ DB.active=null; save(); setView('project'); toast('Form deleted'); return; }
+    DB.active = p.records[0].id; save();
     renderProjSel(); fillSetup(); renderTitleblock(); go('setup');
-    toast('Record deleted');
+    toast('Form deleted');
   });
 
   // ---- plans ----
@@ -3154,10 +3616,11 @@ function init(){
         const b = blankRecord();
         for(const k in b) if(!(k in r)) r[k]=b[k];
         r.id = 'r'+Math.random().toString(36).slice(2,10);
-        DB.records.push(r); n++;
+        (proj()||{records:[]}).records.push(r); n++;
       });
       if(!n){ toast('No records found in that file'); return; }
-      DB.active = DB.records[DB.records.length-1].id;
+      const pr = proj();
+      DB.active = pr.records[pr.records.length-1].id;
       save(); renderProjSel(); fillSetup(); renderTitleblock();
       toast(n+' record'+(n===1?'':'s')+' imported');
       go('setup');
