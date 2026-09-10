@@ -1,79 +1,113 @@
-// Generates the Strandline app icon as a PNG, with no image-library dependency.
-// The mark is the same yellow "S" the app header uses, drawn as two stroked arcs.
-const zlib = require('zlib');
+/* Builds the iOS app icon and splash from tools/icon-source.png.
+ *
+ * Two things have to be corrected before Apple will take it:
+ *
+ *  1. The source has rounded corners baked in, with white outside them. iOS
+ *     applies its own squircle mask, so shipping it as-is double-masks the
+ *     artwork and leaves white wedges around the edge. The corners are filled
+ *     back in with the background navy so the image is a true full square.
+ *  2. App icons must carry no alpha channel, and must be exactly 1024x1024.
+ *
+ * Requires sharp, which is deliberately NOT a project dependency - it would be
+ * pulled on every CI install for something that runs once when the brand
+ * changes. Install it wherever you like and point SHARP at it, or run:
+ *
+ *   npm --prefix ./.iconbuild install sharp
+ *   node tools/make-icon.js ./.iconbuild/node_modules/sharp
+ */
+
+const path = require('path');
 const fs = require('fs');
 
-const BG = [0x12, 0x12, 0x12];
-const FG = [0xF2, 0xC5, 0x11];
-
-function crc32(buf){
-  let c, table = [];
-  for(let n=0;n<256;n++){ c=n; for(let k=0;k<8;k++) c = c&1 ? 0xEDB88320 ^ (c>>>1) : c>>>1; table[n]=c>>>0; }
-  let crc = 0xFFFFFFFF;
-  for(const b of buf) crc = table[(crc ^ b) & 0xFF] ^ (crc >>> 8);
-  return (crc ^ 0xFFFFFFFF) >>> 0;
-}
-function chunk(type, data){
-  const len = Buffer.alloc(4); len.writeUInt32BE(data.length);
-  const td = Buffer.concat([Buffer.from(type, 'ascii'), data]);
-  const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(td));
-  return Buffer.concat([len, td, crc]);
-}
-function png(width, height, rgb){
-  const sig = Buffer.from([0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A]);
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(width,0); ihdr.writeUInt32BE(height,4);
-  ihdr[8]=8; ihdr[9]=2; ihdr[10]=0; ihdr[11]=0; ihdr[12]=0;   // 8-bit RGB
-  const raw = Buffer.alloc(height*(1+width*3));
-  for(let y=0;y<height;y++){
-    raw[y*(1+width*3)] = 0;                                    // filter: none
-    rgb.copy(raw, y*(1+width*3)+1, y*width*3, (y+1)*width*3);
-  }
-  return Buffer.concat([sig, chunk('IHDR',ihdr),
-    chunk('IDAT', zlib.deflateSync(raw,{level:9})), chunk('IEND', Buffer.alloc(0))]);
+const SHARP = process.argv[2] || 'sharp';
+let sharp;
+try { sharp = require(SHARP); }
+catch (e) {
+  console.error('Could not load sharp from "' + SHARP + '".');
+  console.error('Pass the path as the first argument. See the header of this file.');
+  process.exit(1);
 }
 
-const norm = a => { while(a < -360) a += 360; while(a > 360) a -= 360; return a; };
-// shortest distance from p to a circular arc, with round caps
-function arcDist(px, py, cx, cy, r, a0, a1){
-  const dx = px-cx, dy = py-cy;
-  let ang = Math.atan2(dy,dx) * 180/Math.PI;
-  const len = Math.hypot(dx,dy);
-  // put the angle in [a0, a0+360) so ranges that cross +/-180 still match
-  const a = a0 + ((((ang - a0) % 360) + 360) % 360);
-  if(a <= a1) return Math.abs(len - r);
-  const e0x = cx + r*Math.cos(a0*Math.PI/180), e0y = cy + r*Math.sin(a0*Math.PI/180);
-  const e1x = cx + r*Math.cos(a1*Math.PI/180), e1y = cy + r*Math.sin(a1*Math.PI/180);
-  return Math.min(Math.hypot(px-e0x,py-e0y), Math.hypot(px-e1x,py-e1y));
-}
+const ROOT   = path.join(__dirname, '..');
+const SRC    = path.join(__dirname, 'icon-source.png');
+const ICON   = path.join(ROOT, 'ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png');
+const SPLASH = path.join(ROOT, 'ios/App/App/Assets.xcassets/Splash.imageset');
 
-function render(S){
-  const buf = Buffer.alloc(S*S*3);
-  const cx = S/2, cy = S/2;
-  const r  = S*0.171;          // arc radius
-  const sw = S*0.062;          // half stroke width
-  const U = {cx, cy: cy-r, a0:-270, a1:-45};   // top of the S
-  const L = {cx, cy: cy+r, a0:-90,  a1:135};   // bottom of the S
-  const SS = 4;                                 // supersampling for clean edges
-  for(let y=0;y<S;y++){
-    for(let x=0;x<S;x++){
-      let hits = 0;
-      for(let sy=0;sy<SS;sy++) for(let sx=0;sx<SS;sx++){
-        const px = x + (sx+0.5)/SS, py = y + (sy+0.5)/SS;
-        const d = Math.min(
-          arcDist(px,py,U.cx,U.cy,r,U.a0,U.a1),
-          arcDist(px,py,L.cx,L.cy,r,L.a0,L.a1));
-        if(d <= sw) hits++;
-      }
-      const t = hits/(SS*SS);
-      const o = (y*S+x)*3;
-      for(let k=0;k<3;k++) buf[o+k] = Math.round(BG[k]*(1-t) + FG[k]*t);
+const NAVY = { r: 11, g: 25, b: 44 };
+
+// Fraction of the edge used as the corner radius in the source artwork,
+// measured from it: the diagonal runs 88px into a 1254px image before hitting
+// the background, and r = inset / (1 - 1/sqrt(2)).
+const RADIUS_FRAC = 305 / 1254;
+
+async function squareOff(srcPath) {
+  const img = sharp(srcPath).removeAlpha();
+  const { width, height } = await img.metadata();
+  const { data, info } = await img.raw().toBuffer({ resolveWithObject: true });
+  const w = info.width, h = info.height, ch = info.channels;
+  // Radius is nudged out slightly so the anti-aliased ring at the original
+  // boundary is covered too, rather than surviving as a pale halo.
+  const r = Math.round(Math.min(w, h) * RADIUS_FRAC);
+
+  const out = Buffer.from(data);
+  const outside = (x, y) => {
+    const cx = x < r ? r : (x > w - 1 - r ? w - 1 - r : x);
+    const cy = y < r ? r : (y > h - 1 - r ? h - 1 - r : y);
+    if (cx === x && cy === y) return false;             // straight edge, inside
+    const dx = x - cx, dy = y - cy;
+    return (dx * dx + dy * dy) > r * r;
+  };
+  let filled = 0;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!outside(x, y)) continue;
+      const o = (y * w + x) * ch;
+      out[o] = NAVY.r; out[o + 1] = NAVY.g; out[o + 2] = NAVY.b;
+      filled++;
     }
   }
-  return png(S,S,buf);
+  console.log('  corner pixels filled: ' + filled.toLocaleString() +
+              ' (' + (filled / (w * h) * 100).toFixed(1) + '% of the image)');
+  return sharp(out, { raw: { width: w, height: h, channels: ch } });
 }
 
-const out = process.argv[2] || 'icon-1024.png';
-const size = +(process.argv[3] || 1024);
-fs.writeFileSync(out, render(size));
-console.log('wrote', out, size+'x'+size, fs.statSync(out).size, 'bytes');
+async function main() {
+  if (!fs.existsSync(SRC)) { console.error('Missing ' + SRC); process.exit(1); }
+
+  const squared = await squareOff(SRC);
+  const flat = await squared.png().toBuffer();
+
+  // App icon: exactly 1024x1024, RGB, no alpha.
+  await sharp(flat)
+    .resize(1024, 1024, { kernel: 'lanczos3', fit: 'fill' })
+    .removeAlpha()
+    .png({ compressionLevel: 9 })
+    .toFile(ICON);
+  console.log('  wrote AppIcon-512@2x.png  1024x1024');
+
+  // Splash: the mark centred on the same navy, well inside the safe area
+  // because the launch image is cropped differently on every device.
+  const markSize = Math.round(2732 * 0.34);
+  const mark = await sharp(flat).resize(markSize, markSize, { kernel: 'lanczos3' }).png().toBuffer();
+  const splash = await sharp({
+      create: { width: 2732, height: 2732, channels: 3, background: NAVY }
+    })
+    .composite([{ input: mark, gravity: 'centre' }])
+    .removeAlpha()
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+  for (const f of ['splash-2732x2732.png', 'splash-2732x2732-1.png', 'splash-2732x2732-2.png']) {
+    fs.writeFileSync(path.join(SPLASH, f), splash);
+  }
+  console.log('  wrote 3 splash images       2732x2732');
+
+  for (const [label, p] of [['icon', ICON], ['splash', path.join(SPLASH, 'splash-2732x2732.png')]]) {
+    const b = fs.readFileSync(p);
+    const ct = b[25];
+    console.log('  ' + label.padEnd(7) + b.readUInt32BE(16) + 'x' + b.readUInt32BE(20) +
+                '  colourType ' + ct + (ct === 2 ? ' (RGB, no alpha - correct)' : ' (HAS ALPHA - would be rejected)') +
+                '  ' + (b.length / 1024).toFixed(0) + ' KB');
+  }
+}
+
+main().catch(e => { console.error('FAILED:', e.message); process.exit(1); });
