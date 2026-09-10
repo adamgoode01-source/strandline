@@ -24,12 +24,33 @@ go out automatically.
 
 ## 3 — Codemagic
 
-| # | Step |
-|---|------|
-| 1 | Sign up at codemagic.io, connect the Git repo (see step 4) |
-| 2 | Team settings → Integrations → **Apple Developer Portal** → add Issuer ID, Key ID, and the `.p8` |
-| 3 | Name that integration **exactly** `JC Concrete App Store Connect` — it is referenced by name in `codemagic.yaml`, and a mismatch is the most common first-build failure |
-| 4 | Start build → workflow **Strandline iOS - TestFlight** |
+**There are no environment variables to create.** All three Apple values go into
+one integration form.
+
+Team settings → Integrations → **Apple Developer Portal** → Add key:
+
+| Form field | What to paste | Where to find it |
+|---|---|---|
+| **Issuer ID** | UUID, e.g. `57246542-96fe-1a63-e053-0824d011072a` | App Store Connect → Users and Access → Integrations → App Store Connect API. Shown once at the top of the page, above the key list — it is per-account, not per-key |
+| **Key ID** | 10 characters, e.g. `2X9R4HXF34` | Same page, the `KEY ID` column of your key row. Also embedded in the filename: `AuthKey_2X9R4HXF34.p8` |
+| **API key** | Upload the `.p8` file itself | Your Downloads folder |
+| **Name** | `JC Concrete App Store Connect` | Must match `codemagic.yaml` exactly |
+
+Then: Start build → workflow **Strandline iOS - TestFlight**.
+
+### If you would rather use environment variables
+
+Only needed if you skip the integration. Group name `appstore`, marked secure,
+and `groups: - appstore` must be added back under `environment:`:
+
+| Variable | Value |
+|---|---|
+| `APP_STORE_CONNECT_ISSUER_ID` | the Issuer ID |
+| `APP_STORE_CONNECT_KEY_IDENTIFIER` | the Key ID |
+| `APP_STORE_CONNECT_PRIVATE_KEY` | full text of the `.p8`, including the BEGIN and END lines |
+| `CERTIFICATE_PRIVATE_KEY` | an RSA private key for cert generation |
+
+The integration route is fewer moving parts. Use it unless something forces otherwise.
 
 ## 4 — Push the repo
 
