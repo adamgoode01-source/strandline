@@ -1,7 +1,7 @@
 {
   "name": "strandline",
   "version": "1.0.0",
-  "description": "Tendon elongation and lift-off records - JC Concrete, LLC",
+  "description": "Tendon elongation and lift-off records for post-tensioned concrete",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

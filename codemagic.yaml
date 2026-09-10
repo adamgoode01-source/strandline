@@ -95,7 +95,7 @@ workflows:
         # match the group exactly. Until then the build simply lands in
         # TestFlight and you assign it by hand.
         # beta_groups:
-        #   - JC Concrete Field
+        #   - Field Crew
 
       email:
         recipients:

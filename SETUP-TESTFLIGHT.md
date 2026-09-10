@@ -18,7 +18,7 @@ Keep the **Issuer ID** and **Key ID** handy — Codemagic needs both.
 Testers still to do. Not a blocker: the build will upload to TestFlight
 regardless, and you assign it to testers afterward.
 
-When you do create the group, name it **JC Concrete Field**, then uncomment
+When you do create the group, name it **Field Crew**, then uncomment
 the `beta_groups` block at the bottom of `codemagic.yaml` so future builds
 go out automatically.
 

@@ -35,7 +35,7 @@ $out = @"
 <meta name="color-scheme" content="light dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Strandline">
-<meta name="description" content="Tendon elongation and lift-off records for post-tensioned slabs. JC Concrete, LLC.">
+<meta name="description" content="Tendon elongation and lift-off records for post-tensioned slabs. post-tensioned concrete.">
 $head
 </head>
 <body>
