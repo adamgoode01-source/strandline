@@ -24,6 +24,17 @@ workflows:
     instance_type: mac_mini_m2
     max_build_duration: 45
 
+    # Build and ship on every push to main. This relies on the webhook
+    # Codemagic registers when the repository is connected. If that webhook is
+    # not live the block is simply inert and builds still start from the UI.
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+
     environment:
       groups:
         - appstore
