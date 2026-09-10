@@ -2,12 +2,9 @@
 #
 # Before the first run, one thing must exist in the Codemagic UI (it cannot live here):
 #   Team settings > Integrations > Apple Developer Portal -> add your App Store Connect
-#   API key (Issuer ID, Key ID, .p8 file). Name that integration EXACTLY:
-#
-#       JC Concrete App Store Connect
-#
-#   It is referenced by name under `integrations` below. A mismatch is the most
-#   common first-build failure.
+#   API key (Issuer ID, Key ID, .p8 file). The name given to that key must match
+#   the `app_store_connect:` value under `integrations` below, exactly.
+#   Currently set to: PT Elongation App Manager
 #
 # Docs: https://docs.codemagic.io/yaml-quick-start/building-a-native-ios-app/
 
@@ -18,8 +15,11 @@ workflows:
     max_build_duration: 45
 
     integrations:
-      # Name of the Apple Developer Portal integration created in Codemagic team settings.
-      app_store_connect: JC Concrete App Store Connect
+      # This must match the integration name in Codemagic EXACTLY, character for
+      # character. Find it at: Teams > (your team) > Integrations > Developer
+      # Portal > Manage keys - it is the "Name" column, which is the name given
+      # to the App Store Connect API key when it was added to Codemagic.
+      app_store_connect: PT Elongation App Manager
 
     environment:
       vars:

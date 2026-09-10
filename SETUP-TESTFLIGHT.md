@@ -34,7 +34,7 @@ Team settings → Integrations → **Apple Developer Portal** → Add key:
 | **Issuer ID** | UUID, e.g. `57246542-96fe-1a63-e053-0824d011072a` | App Store Connect → Users and Access → Integrations → App Store Connect API. Shown once at the top of the page, above the key list — it is per-account, not per-key |
 | **Key ID** | 10 characters, e.g. `2X9R4HXF34` | Same page, the `KEY ID` column of your key row. Also embedded in the filename: `AuthKey_2X9R4HXF34.p8` |
 | **API key** | Upload the `.p8` file itself | Your Downloads folder |
-| **Name** | `JC Concrete App Store Connect` | Must match `codemagic.yaml` exactly |
+| **Name** | `PT Elongation App Manager` | Must match the `app_store_connect:` value in `codemagic.yaml` exactly. Find it later under Teams → Integrations → Developer Portal → Manage keys |
 
 Then: Start build → workflow **Strandline iOS - TestFlight**.
 
