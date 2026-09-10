@@ -1,11 +1,13 @@
 # Codemagic CI/CD - builds Strandline for iOS on a macOS machine and ships to TestFlight.
 #
-# Before the first run, set these up in the Codemagic UI (they cannot live in this file):
-#   1. Team settings > Integrations > Apple Developer Portal  -> connect your App Store
-#      Connect API key (Issuer ID, Key ID, .p8). Name the integration and put that name
-#      in APP_STORE_CONNECT_ISSUER below via the `app_store_connect` group, or use
-#      `auth: integration` as configured here.
-#   2. App settings > Environment variables > group "appstore" (mark it secure).
+# Before the first run, one thing must exist in the Codemagic UI (it cannot live here):
+#   Team settings > Integrations > Apple Developer Portal -> add your App Store Connect
+#   API key (Issuer ID, Key ID, .p8 file). Name that integration EXACTLY:
+#
+#       JC Concrete App Store Connect
+#
+#   It is referenced by name under `integrations` below. A mismatch is the most
+#   common first-build failure.
 #
 # Docs: https://docs.codemagic.io/yaml-quick-start/building-a-native-ios-app/
 
@@ -20,8 +22,6 @@ workflows:
       app_store_connect: JC Concrete App Store Connect
 
     environment:
-      groups:
-        - appstore
       vars:
         BUNDLE_ID: "com.jcconcrete.strandline"
         XCODE_PROJECT: "ios/App/App.xcodeproj"
@@ -75,15 +75,17 @@ workflows:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
-        # Internal testers get the build with no Beta App Review. Add the group
-        # names you create in App Store Connect; remove this block to upload only.
-        beta_groups:
-          - JC Concrete Field
         submit_to_app_store: false
+        # Once the internal tester group exists in App Store Connect, uncomment
+        # this and the build will be handed to it automatically. The name must
+        # match the group exactly. Until then the build simply lands in
+        # TestFlight and you assign it by hand.
+        # beta_groups:
+        #   - JC Concrete Field
 
       email:
         recipients:
-          - adamgoode01@gmail.com
+          - agoode@jcconcretellc.com
         notify:
           success: true
           failure: true

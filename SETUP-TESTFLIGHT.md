@@ -8,34 +8,28 @@ Change it in `capacitor.config.json` **and** `codemagic.yaml` if you want a diff
 
 ---
 
-## 1 — Apple Developer portal
+## 1 — Apple Developer portal — DONE
 
-| # | Step | Where |
-|---|------|-------|
-| 1 | Register App ID `com.jcconcrete.strandline`, enable no special capabilities | Certificates, IDs & Profiles → Identifiers |
-| 2 | Create an **App Store Connect API key**, role **App Manager** | Users and Access → Integrations → App Store Connect API |
-| 3 | Download the `.p8` file. **It downloads once and cannot be re-downloaded.** Note the **Issuer ID** and **Key ID** | same page |
+App ID registered, App Manager API key created, `.p8` downloaded.
+Keep the **Issuer ID** and **Key ID** handy — Codemagic needs both.
 
-## 2 — App Store Connect
+## 2 — App Store Connect — app record DONE
 
-| # | Step |
-|---|------|
-| 1 | New App → iOS → name, primary language, bundle ID from above, SKU (any unique string, e.g. `STRANDLINE-001`) |
-| 2 | TestFlight tab → Internal Testing → create a group named **JC Concrete Field** |
-| 3 | Add testers by Apple ID email. Internal testers must be users on your App Store Connect team |
+Testers still to do. Not a blocker: the build will upload to TestFlight
+regardless, and you assign it to testers afterward.
 
-> The group name must match `beta_groups` in `codemagic.yaml`, or the upload
-> succeeds but nobody is notified.
+When you do create the group, name it **JC Concrete Field**, then uncomment
+the `beta_groups` block at the bottom of `codemagic.yaml` so future builds
+go out automatically.
 
 ## 3 — Codemagic
 
 | # | Step |
 |---|------|
 | 1 | Sign up at codemagic.io, connect the Git repo (see step 4) |
-| 2 | Team settings → Integrations → **Apple Developer Portal** → add the Issuer ID, Key ID, and `.p8` |
-| 3 | Name that integration exactly **`JC Concrete App Store Connect`** — it is referenced by name in `codemagic.yaml` |
-| 4 | App settings → Environment variables → create a group named **`appstore`**, mark it **secure** (can be empty; the file expects the group to exist) |
-| 5 | Start build → workflow **Strandline iOS - TestFlight** |
+| 2 | Team settings → Integrations → **Apple Developer Portal** → add Issuer ID, Key ID, and the `.p8` |
+| 3 | Name that integration **exactly** `JC Concrete App Store Connect` — it is referenced by name in `codemagic.yaml`, and a mismatch is the most common first-build failure |
+| 4 | Start build → workflow **Strandline iOS - TestFlight** |
 
 ## 4 — Push the repo
 
