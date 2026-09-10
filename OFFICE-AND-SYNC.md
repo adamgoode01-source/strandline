@@ -33,7 +33,29 @@ happens in `expand.mjs`, which is tested against a sheet whose correct answer
 is known. A model is good at reading a cramped table and bad at being audited,
 so it is never asked to compute.
 
-### Running it
+### The desktop app
+
+```
+cd desktop
+npm install
+npm start
+```
+
+PowerShell does not accept `&&` as a separator, so those go on separate
+lines rather than chained.
+
+The window is the same page the iPad and the artifact use, with the office
+controls added: **Read the schedule off the plans** appears on a project, and
+**API key** stores your key in the Windows credential store. Nothing about the
+field app changes.
+
+The renderer runs with context isolation on, node integration off, and a CSP
+that allows no remote script and no network from the page at all. It reaches
+the outside world only through a fixed set of named operations in
+`electron/preload.cjs`, and the sync call goes through the main process so the
+token never sits in the page and plain http is refused in one place.
+
+### Running it from the command line
 
 ```
 cd desktop

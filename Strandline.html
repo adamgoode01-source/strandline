@@ -576,6 +576,23 @@ hr.r{border:0;border-top:1px solid var(--rule);margin:14px 0}
       </div>
     </div>
 
+    <div class="card" id="officeKeyCard" style="display:none">
+      <h3>Office settings</h3>
+      <div class="body">
+        <div class="note" id="officeKeyNote"></div>
+        <div class="grid g2" style="margin-top:12px">
+          <label class="f"><span>Anthropic API key</span>
+            <input id="officeKeyInput" type="password" placeholder="sk-ant-..."
+                   autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+        </div>
+        <div class="btnrow" style="margin-top:12px">
+          <button class="btn primary" id="officeKeySave">Save key</button>
+          <button class="btn ghost danger" id="officeKeyClear">Remove key</button>
+        </div>
+        <div id="officeKeyMsg" style="margin-top:10px"></div>
+      </div>
+    </div>
+
     <div id="projGrid"></div>
   </section>
 
@@ -612,6 +629,24 @@ hr.r{border:0;border-top:1px solid var(--rule);margin:14px 0}
           <label class="f"><span>Required f'ci (psi)</span><input data-pd="fciReq" inputmode="numeric"></label>
           <label class="f"><span>Send records to</span><input data-pd="emailTo" inputmode="email"></label>
         </div>
+      </div>
+    </div>
+
+    <div class="card" id="officeCard" style="display:none">
+      <h3>Read the schedule off the plans <span class="pill">DESKTOP</span></h3>
+      <div class="body">
+        <div class="note">These drawings carry the schedule as line art, not text, so it is read by
+          looking at the rendered sheet rather than parsing the file. The transcription is machine work:
+          <strong>check every elongation against the drawing before the crew stresses anything.</strong></div>
+        <div class="grid g3" style="margin-top:12px">
+          <label class="f"><span>Pages (blank = all)</span><input id="officePages" placeholder="4-7"></label>
+          <label class="f"><span>Job number</span><input id="officeJob"></label>
+        </div>
+        <div class="btnrow" style="margin-top:12px">
+          <button class="btn primary" id="officeRead">Choose PDF and read</button>
+          <button class="btn ghost" id="officeKey">API key</button>
+        </div>
+        <div id="officeLog" style="margin-top:12px"></div>
       </div>
     </div>
 
@@ -2771,6 +2806,117 @@ function candidateMarks(tokens){
 let plan = null;   // {name,size,pageCount,tokens,cands,url}
 let panel = 'setup';
 
+/* ---------- desktop (Electron) ----------
+   The same page runs as the artifact, the iOS app and the office desktop app.
+   Only the desktop build has a preload bridge, so these controls appear there
+   and nowhere else, rather than being shown everywhere and failing. */
+function isDesktop(){
+  return !!(window.strandline && window.strandline.platform === 'desktop');
+}
+
+async function officeRefreshSettings(){
+  if(!isDesktop()) return null;
+  const st = await window.strandline.settings.get();
+  const note = $('#officeKeyNote');
+  if(note){
+    note.innerHTML = st.hasApiKey
+      ? '<strong>A key is saved.</strong> ' + (st.keyStorage === 'keychain'
+          ? 'Held encrypted in the Windows credential store.'
+          : '<span style="color:var(--bad)">Held as plain text, because this machine offers no credential store.</span>')
+      : 'Reading a schedule calls the Claude API, which needs your own key from ' +
+        'console.anthropic.com. It stays on this machine. Roughly a cent or two per sheet.';
+  }
+  return st;
+}
+
+function officeLog(html, cls){
+  const el = $('#officeLog');
+  if(el) el.innerHTML = '<div class="note' + (cls ? ' ' + cls : '') + '">' + html + '</div>';
+}
+
+async function officeReadPlans(){
+  const p = proj();
+  if(!p){ toast('Open a project first'); return; }
+  const st = await officeRefreshSettings();
+  if(!st.hasApiKey){
+    $('#officeKeyCard').style.display = '';
+    setView('home');
+    toast('Add an API key first');
+    return;
+  }
+  const pdf = await window.strandline.pickPdf();
+  if(!pdf) return;
+
+  const btn = $('#officeRead');
+  btn.disabled = true;
+  officeLog('Rendering the first sheet...');
+  const stop = window.strandline.onReadProgress(m => {
+    if(m.phase === 'start') officeLog('Examining ' + m.examining + ' of ' + m.totalPages + ' sheets.');
+    else if(m.phase === 'render') officeLog('Sheet ' + m.page + ' (' + m.index + ' of ' + m.of + ') - rendering...');
+    else if(m.phase === 'locate') officeLog('Sheet ' + m.page + ' (' + m.index + ' of ' + m.of + ') - looking for a schedule...');
+    else if(m.phase === 'read') officeLog('Sheet ' + m.page + ' - reading ' + esc(m.title) + '...');
+    else if(m.phase === 'readDone') officeLog('Sheet ' + m.page + ' - read ' + m.rows + ' rows.');
+    else if(m.phase === 'pageError') officeLog('Sheet ' + m.page + ': ' + esc(m.message), 'stop');
+  });
+
+  let res;
+  try{
+    res = await window.strandline.readPlans({
+      pdfPath: pdf,
+      pages: $('#officePages').value.trim() || null,
+      job: $('#officeJob').value.trim() || p.jobNo || '',
+      name: p.name || ''
+    });
+  }finally{
+    stop();
+    btn.disabled = false;
+  }
+
+  if(res.error){ officeLog('<strong>Could not read it.</strong> ' + esc(res.error), 'stop'); return; }
+
+  /* Merged into the project that is already open rather than creating a second
+     one: the operator has already said which job this belongs to. */
+  const b = res.bundle;
+  let added = 0;
+  b.forms.forEach(f => {
+    const r = newFormForBuilding(p, f.bldg || f.name || 'Schedule');
+    r.recName = f.name || r.recName;
+    r.pour = f.pour || '';
+    if(f.shopDwg) r.shopDwg = f.shopDwg;
+    r.tendons = (f.tendons || []).map(t => Object.assign(blankTendon(String(t.mark || '')), {
+      loc: t.loc || '', grp: t.grp || '',
+      strands: num(t.strands) > 0 ? num(t.strands) : 1,
+      len: t.len == null ? '' : String(t.len),
+      calc: t.calc == null ? '' : String(t.calc),
+      anchor: t.anchor || '', notes: t.notes || ''
+    }));
+    p.records.push(r);
+    added += r.tendons.length;
+  });
+  if(!p.jobNo && b.project && b.project.jobNo) p.jobNo = b.project.jobNo;
+  save();
+  renderProject();
+
+  const errs = (b.warnings || []).filter(w => w.level === 'error');
+  const unread = b.forms.reduce((a, f) => a.concat(f.unreadable || []), []);
+  let html = '<strong>Read ' + added + ' tendons across ' + b.forms.length + ' form' +
+             (b.forms.length === 1 ? '' : 's') + '.</strong> ';
+  if(b.source && b.source.tokens)
+    html += '<span style="color:var(--ink-3)">(' + b.source.tokens.input.toLocaleString() +
+            ' in / ' + b.source.tokens.output.toLocaleString() + ' out)</span> ';
+  html += 'Check the elongations against the drawing before the crew stresses anything.';
+  if(unread.length)
+    html += '<div style="margin-top:8px"><strong>Could not read with confidence:</strong>' +
+            '<ul style="margin:6px 0 0 18px;padding:0">' +
+            unread.map(u => '<li>' + esc(u) + '</li>').join('') + '</ul></div>';
+  if(errs.length)
+    html += '<div style="margin-top:8px"><strong>Must be checked before use:</strong>' +
+            '<ul style="margin:6px 0 0 18px;padding:0">' +
+            errs.map(w => '<li>' + esc((w.where ? w.where + ' - ' : '') + w.msg) + '</li>').join('') + '</ul></div>';
+  officeLog(html, (errs.length || unread.length) ? 'stop' : '');
+  toast('Read ' + added + ' tendons');
+}
+
 /* ---------- import a project read off the plans ----------
    The office reader (desktop/read-plans.mjs) writes a project file: the
    schedule as transcribed, already expanded to one row per tendon. Warnings
@@ -2841,6 +2987,21 @@ function syncBase(){
 async function syncFetch(path, opts){
   const cfg = syncCfg();
   if(!cfg.url || !cfg.token) throw new Error('no server configured');
+  const method = (opts && opts.method) || 'GET';
+  const body = opts && opts.body ? JSON.parse(opts.body) : undefined;
+
+  /* On the desktop this goes through the main process: the token stays out of
+     the page, and a plain-http address is refused there rather than in three
+     places here. On iOS fetch is the only route available. */
+  if(isDesktop()){
+    const r = await window.strandline.sync(cfg.url, cfg.token, path, method, body);
+    if(r.error) throw new Error(r.error);
+    if(r.status === 401) throw new Error('token rejected');
+    if(r.status === 403) throw new Error('this device is not permitted to do that');
+    if(!r.ok) throw new Error('server said '+r.status);
+    return r.body;
+  }
+
   const res = await fetch(syncBase()+path, Object.assign({
     headers: { 'authorization':'Bearer '+cfg.token, 'content-type':'application/json' }
   }, opts||{}));
@@ -3060,6 +3221,7 @@ function renderProject(){
 
   renderFormList();
   renderBuildings();
+  if(isDesktop()){ const oc = $('#officeCard'); if(oc) oc.style.display = ''; }
 }
 
 function renderFormList(){
@@ -3741,6 +3903,36 @@ function init(){
     if(panel==='tendons') renderTendons();
     if(panel==='review') renderReview();
   });
+  /* ---------- desktop controls ---------- */
+  if(isDesktop()){
+    const oc = $('#officeCard'); if(oc) oc.style.display = '';
+    officeRefreshSettings();
+    $('#officeRead').addEventListener('click', officeReadPlans);
+    $('#officeKey').addEventListener('click', () => {
+      $('#officeKeyCard').style.display = '';
+      officeRefreshSettings();
+      setView('home');
+      $('#officeKeyCard').scrollIntoView({ block: 'center' });
+    });
+    $('#officeKeySave').addEventListener('click', async () => {
+      const k = $('#officeKeyInput').value.trim();
+      if(!k){ $('#officeKeyMsg').innerHTML = '<div class="note stop">Paste a key first.</div>'; return; }
+      const r = await window.strandline.settings.setKey(k);
+      $('#officeKeyInput').value = '';
+      await officeRefreshSettings();
+      $('#officeKeyMsg').innerHTML = r.stored === 'keychain'
+        ? '<div class="note ok"><strong>Saved</strong> to the Windows credential store.</div>'
+        : '<div class="note stop"><strong>Saved, but not encrypted.</strong> This machine offers no ' +
+          'credential store, so the key sits in a plain file in your user profile.</div>';
+    });
+    $('#officeKeyClear').addEventListener('click', async () => {
+      if(!confirm('Remove the saved API key from this machine?')) return;
+      await window.strandline.settings.setKey('');
+      await officeRefreshSettings();
+      $('#officeKeyMsg').innerHTML = '<div class="note">Removed.</div>';
+    });
+  }
+
   /* ---------- plan file import ---------- */
   $('#importProj').addEventListener('click', ()=>$('#importProjFile').click());
   $('#importProjFile').addEventListener('change', async e=>{
@@ -3804,12 +3996,21 @@ function init(){
     if(!url || !token){ $('#syncMsg').innerHTML = '<div class="note stop">Enter both the address and the token.</div>'; return; }
     $('#syncMsg').innerHTML = '<div class="note">Testing...</div>';
     try{
-      const h = await fetch(url+'/health');
-      if(!h.ok) throw new Error('the server answered '+h.status+' at /health');
-      const r = await fetch(url+'/v1/projects', { headers:{ 'authorization':'Bearer '+token } });
-      if(r.status === 401) throw new Error('the server is reachable but rejected that token');
-      if(!r.ok) throw new Error('the server answered '+r.status);
-      const d = await r.json();
+      let d;
+      if(isDesktop()){
+        const r = await window.strandline.sync(url, token, '/v1/projects', 'GET');
+        if(r.error) throw new Error(r.error);
+        if(r.status === 401) throw new Error('the server is reachable but rejected that token');
+        if(!r.ok) throw new Error('the server answered '+r.status);
+        d = r.body;
+      } else {
+        const h = await fetch(url+'/health');
+        if(!h.ok) throw new Error('the server answered '+h.status+' at /health');
+        const r = await fetch(url+'/v1/projects', { headers:{ 'authorization':'Bearer '+token } });
+        if(r.status === 401) throw new Error('the server is reachable but rejected that token');
+        if(!r.ok) throw new Error('the server answered '+r.status);
+        d = await r.json();
+      }
       $('#syncMsg').innerHTML = '<div class="note ok"><strong>Connected.</strong> '+
         (d.projects||[]).length+' project'+((d.projects||[]).length===1?'':'s')+' waiting on the server.</div>';
     }catch(e){

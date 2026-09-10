@@ -9,11 +9,16 @@
   },
   "scripts": {
     "read": "node read-plans.mjs",
-    "test": "node test-reader.mjs"
+    "test": "node test-reader.mjs && node test-import.mjs",
+    "start": "electron ."
   },
   "dependencies": {
-    "pdfjs-dist": "^6.3.289",
     "@napi-rs/canvas": "^1.0.9",
+    "pdfjs-dist": "^6.3.289",
     "sharp": "^0.34.0"
-  }
+  },
+  "devDependencies": {
+    "electron": "^44.3.0"
+  },
+  "main": "electron/main.cjs"
 }
