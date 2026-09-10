@@ -35,14 +35,17 @@ so it is never asked to compute.
 
 ### The desktop app
 
+From the project root, one command per line - PowerShell rejects `&&`:
+
 ```
-cd desktop
-npm install
+npm install --prefix ./desktop
 npm start
 ```
 
-PowerShell does not accept `&&` as a separator, so those go on separate
-lines rather than chained.
+`npm start` works from the project root or from `desktop/`; the root script
+delegates. Other entry points from the root: `npm run read` for the command
+line reader, `npm run server` for the sync service, `npm run build` to
+regenerate Strandline.html.
 
 The window is the same page the iPad and the artifact use, with the office
 controls added: **Read the schedule off the plans** appears on a project, and

@@ -4,7 +4,12 @@
   "description": "Tendon elongation and lift-off records for post-tensioned concrete",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "npm --prefix ./desktop run start",
+    "desktop": "npm --prefix ./desktop run start",
+    "read": "npm --prefix ./desktop run read --",
+    "server": "npm --prefix ./server run start",
+    "build": "powershell -ExecutionPolicy Bypass -File ./build-standalone.ps1",
+    "test": "node -e \"console.log('run the suites in desktop/ and server/ - see OFFICE-AND-SYNC.md')\""
   },
   "keywords": [],
   "author": "",
