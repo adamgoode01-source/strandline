@@ -60,7 +60,7 @@ token never sits in the page and plain http is refused in one place.
 ```
 cd desktop
 npm install
-set ANTHROPIC_API_KEY=sk-ant-...
+$env:ANTHROPIC_API_KEY = "sk-ant-..."
 
 node read-plans.mjs "path/to/PT shop drawings.pdf" --out project.json --job 2622560140
 ```
@@ -182,9 +182,12 @@ Organisations are isolated by token; one cannot read another's projects.
 ## Tests
 
 ```
-cd desktop && node test-reader.mjs     # 49  fractions, bundle expansion, guards
-cd desktop && node test-import.mjs     # 19  the app importing a real reader file
-cd server  && node test-server.mjs     # 38  auth, roles, merge, conflicts, isolation
+# PowerShell rejects && as a separator - one command per line.
+cd desktop
+node test-reader.mjs      # 49  fractions, bundle expansion, guards
+node test-import.mjs      # 19  the app importing a real reader file
+cd ..server
+node test-server.mjs      # 38  auth, roles, merge, conflicts, isolation
 ```
 
 The client suite needs a running server:
