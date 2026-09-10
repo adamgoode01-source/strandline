@@ -1709,6 +1709,62 @@ function pdfName(r, filled){
   return [slug(r.jobNo||r.job||'job'), slug(r.bldg||''), slug(r.pour||''),
           filled?'ELONG-RECORD':'ELONG-FIELD-SHEET'].filter(Boolean).join('_')+'.pdf';
 }
+/* ---------- native (Capacitor) file delivery ----------
+   Inside a WKWebView a plain <a download> link does nothing at all - the
+   attribute is ignored and the tap silently fails. On the iPad build the PDF
+   has to go through the native filesystem and share sheet instead. */
+function isNative(){
+  try{ return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); }
+  catch(e){ return false; }
+}
+function capPlugin(name){
+  try{ return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins[name]) || null; }
+  catch(e){ return null; }
+}
+// btoa on a spread Uint8Array overflows the call stack well before a 50 KB
+// PDF, so encode in chunks.
+function bytesToBase64(bytes){
+  let bin = "";
+  const CH = 0x8000;
+  for(let i=0;i<bytes.length;i+=CH) bin += String.fromCharCode.apply(null, bytes.subarray(i, i+CH));
+  return btoa(bin);
+}
+// Writes to the app Documents folder, which is exposed to the iOS Files app,
+// then offers the share sheet so the file can go straight to Acrobat or Mail.
+async function nativeDeliver(bytes, name, opts){
+  const FS = capPlugin("Filesystem");
+  if(!FS) return false;
+  let uri = null;
+  try{
+    const res = await FS.writeFile({
+      path: name,
+      data: bytesToBase64(bytes),
+      directory: "DOCUMENTS",
+      recursive: true
+    });
+    uri = res && res.uri;
+  }catch(e){
+    toast("Could not save the file on this device");
+    return false;
+  }
+  const Sh = capPlugin("Share");
+  if(Sh && uri){
+    try{
+      await Sh.share({
+        title: (opts && opts.subject) || name,
+        text:  (opts && opts.body) || "",
+        url:   uri,
+        dialogTitle: "Export elongation sheet"
+      });
+      return true;
+    }catch(e){
+      // the share sheet was dismissed; the file is still saved
+    }
+  }
+  toast("Saved to Files - On My iPad / Strandline / " + name);
+  return true;
+}
+
 function blobDownload(bytes, name, mime){
   const blob = new Blob([bytes], {type: mime||'application/pdf'});
   const url = URL.createObjectURL(blob);
@@ -1731,6 +1787,7 @@ async function downloadsApi(){
   return DL;
 }
 async function deliver(bytes, name, mime){
+  if(isNative() && await nativeDeliver(bytes, name)) return true;
   const d = await downloadsApi();
   if(d){
     try{
@@ -1757,6 +1814,7 @@ async function deliver(bytes, name, mime){
   return true;
 }
 async function shareFile(bytes, name, subject, body){
+  if(isNative()) return await nativeDeliver(bytes, name, {subject, body});
   if(!(navigator.canShare && navigator.share)) return false;
   const file = new File([bytes], name, {type:'application/pdf'});
   if(!navigator.canShare({files:[file]})) return false;
