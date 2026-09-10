@@ -24,33 +24,35 @@ go out automatically.
 
 ## 3 — Codemagic
 
-**There are no environment variables to create.** All three Apple values go into
-one integration form.
+Auth is by **environment variable**. There is no integration name to match.
 
-Team settings → Integrations → **Apple Developer Portal** → Add key:
+App settings → **Environment variables** → create group `appstore`, tick
+**Secure**, and add these four. Names must be exact:
 
-| Form field | What to paste | Where to find it |
+| Variable | Value | Where it comes from |
 |---|---|---|
-| **Issuer ID** | UUID, e.g. `57246542-96fe-1a63-e053-0824d011072a` | App Store Connect → Users and Access → Integrations → App Store Connect API. Shown once at the top of the page, above the key list — it is per-account, not per-key |
-| **Key ID** | 10 characters, e.g. `2X9R4HXF34` | Same page, the `KEY ID` column of your key row. Also embedded in the filename: `AuthKey_2X9R4HXF34.p8` |
-| **API key** | Upload the `.p8` file itself | Your Downloads folder |
-| **Name** | `PT Elongation App Manager` | Must match the `app_store_connect:` value in `codemagic.yaml` exactly. Find it later under Teams → Integrations → Developer Portal → Manage keys |
+| `APP_STORE_CONNECT_ISSUER_ID` | UUID | App Store Connect → Users and Access → Integrations, shown above the key list |
+| `APP_STORE_CONNECT_KEY_IDENTIFIER` | 10 characters | the `KEY ID` column of your key row |
+| `APP_STORE_CONNECT_PRIVATE_KEY` | the **entire** `.p8` file contents | open `AuthKey_XXXXXXXXXX.p8` in Notepad, copy everything |
+| `CERTIFICATE_PRIVATE_KEY` | the **entire** `certificate_private_key.pem` | generated in the project folder — see below |
 
 Then: Start build → workflow **Strandline iOS - TestFlight**.
 
-### If you would rather use environment variables
+### Pasting the two keys
 
-Only needed if you skip the integration. Group name `appstore`, marked secure,
-and `groups: - appstore` must be added back under `environment:`:
+Both are multi-line. Include the `-----BEGIN...` and `-----END...` lines and
+every line between. A missing BEGIN line is the usual cause of an
+"invalid private key" failure.
 
-| Variable | Value |
-|---|---|
-| `APP_STORE_CONNECT_ISSUER_ID` | the Issuer ID |
-| `APP_STORE_CONNECT_KEY_IDENTIFIER` | the Key ID |
-| `APP_STORE_CONNECT_PRIVATE_KEY` | full text of the `.p8`, including the BEGIN and END lines |
-| `CERTIFICATE_PRIVATE_KEY` | an RSA private key for cert generation |
+### The certificate private key
 
-The integration route is fewer moving parts. Use it unless something forces otherwise.
+`certificate_private_key.pem` is in the project folder. It is **gitignored and
+must stay that way** — it is what creates your Apple distribution certificate.
+To regenerate it:
+
+```
+node -e "const{generateKeyPairSync}=require(crypto);console.log(generateKeyPairSync(rsa,{modulusLength:2048,privateKeyEncoding:{type:pkcs8,format:pem},publicKeyEncoding:{type:spki,format:pem}}).privateKey)"
+```
 
 ## 4 — Push the repo
 

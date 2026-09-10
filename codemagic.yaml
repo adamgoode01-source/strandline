@@ -1,12 +1,22 @@
 # Codemagic CI/CD - builds Strandline for iOS on a macOS machine and ships to TestFlight.
 #
-# Before the first run, one thing must exist in the Codemagic UI (it cannot live here):
-#   Team settings > Integrations > Apple Developer Portal -> add your App Store Connect
-#   API key (Issuer ID, Key ID, .p8 file). The name given to that key must match
-#   the `app_store_connect:` value under `integrations` below, exactly.
-#   Currently set to: [Expo] EAS Submit 4J7WIh3UrO
+# Auth is by environment variable, not by a Codemagic "integration", so there is
+# no integration name to match. Create a variable group named exactly:
 #
-# Docs: https://docs.codemagic.io/yaml-quick-start/building-a-native-ios-app/
+#     appstore
+#
+# in App settings > Environment variables, mark it SECURE, and add these four:
+#
+#   APP_STORE_CONNECT_ISSUER_ID       the UUID from App Store Connect >
+#                                     Users and Access > Integrations
+#   APP_STORE_CONNECT_KEY_IDENTIFIER  the 10-character Key ID
+#   APP_STORE_CONNECT_PRIVATE_KEY     the ENTIRE .p8 file contents, including
+#                                     the BEGIN and END lines
+#   CERTIFICATE_PRIVATE_KEY           an RSA private key used to create the
+#                                     distribution certificate (see
+#                                     SETUP-TESTFLIGHT.md for how to make one)
+#
+# Docs: https://docs.codemagic.io/yaml-code-signing/signing-ios/
 
 workflows:
   ios-testflight:
@@ -14,17 +24,9 @@ workflows:
     instance_type: mac_mini_m2
     max_build_duration: 45
 
-    integrations:
-      # This must match the integration name in Codemagic EXACTLY, character for
-      # character. Find it at: Teams > (your team) > Integrations > Developer
-      # Portal > Manage keys - it is the "Name" column, which is the name given
-      # to the App Store Connect API key when it was added to Codemagic.
-      # Quoted deliberately: the value starts with "[", which unquoted YAML
-      # parses as the beginning of a flow sequence (an array) and the file
-      # fails to load.
-      app_store_connect: "[Expo] EAS Submit 4J7WIh3UrO"
-
     environment:
+      groups:
+        - appstore
       vars:
         BUNDLE_ID: "com.jcconcrete.strandline"
         XCODE_PROJECT: "ios/App/App.xcodeproj"
@@ -83,7 +85,9 @@ workflows:
 
     publishing:
       app_store_connect:
-        auth: integration
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
         submit_to_app_store: false
         # Once the internal tester group exists in App Store Connect, uncomment

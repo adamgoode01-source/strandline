@@ -23,6 +23,9 @@ xcuserdata/
 *.certSigningRequest
 *.mobileprovision
 AuthKey_*
+*.pem
+*.key
+certificate_private_key*
 
 # machine-local editor settings
 .claude/settings.local.json
