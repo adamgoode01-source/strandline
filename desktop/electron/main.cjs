@@ -17,6 +17,24 @@ const { pathToFileURL } = require('node:url');
 
 const ROOT = path.join(__dirname, '..', '..');            // repo root
 const PAGE = path.join(ROOT, 'Strandline.html');
+
+/* A test run gets its own profile.
+ *
+ * It did not, and the consequence was not theoretical: a diagnostic run typed
+ * placeholder names into the shape alphabet, saved them the way the app saves
+ * anything the operator types, and the next real run recalled fourteen of them
+ * onto real shapes. Nothing wrong reached a record - unresolvable cells come
+ * back blank - but almost nothing filled either, and the cause was invisible
+ * from inside the app.
+ *
+ * This has to happen before any getPath('userData') call below. */
+if (process.env.STRANDLINE_DIAG || process.env.STRANDLINE_SMOKE) {
+  const sandbox = process.env.STRANDLINE_TEST_PROFILE ||
+    path.join(app.getPath('temp'), 'strandline-test-profile');
+  try { fs.mkdirSync(sandbox, { recursive: true }); } catch (e) {}
+  app.setPath('userData', sandbox);
+}
+
 const SETTINGS = path.join(app.getPath('userData'), 'settings.json');
 
 let win = null;

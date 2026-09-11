@@ -722,6 +722,8 @@ table.entry td.out{font-family:var(--f-mono);font-size:11px;color:var(--ink-3);w
                 <div class="btnrow" style="margin-top:12px">
                   <button class="btn primary sm" id="shapeApply">Fill the rows</button>
                   <button class="btn ghost sm" id="shapeClose">Not now</button>
+                  <button class="btn ghost sm danger" id="shapeForget"
+                          title="Drop every shape name remembered from earlier sheets and start again">Forget remembered shapes</button>
                   <span id="shapeNote" style="font-size:11px;color:var(--ink-3);align-self:center"></span>
                 </div>
               </div>
@@ -3397,6 +3399,24 @@ function vtReady(){
   return { qty, elong };
 }
 
+/* Drop everything remembered and read the table again, so the panel comes
+   back showing only what this sheet proves for itself. Worth having a way
+   out: a name that was wrong, or typed against a different detailer's
+   lettering, otherwise follows every later sheet silently. */
+async function vtForget(){
+  if(!window.strandline || !window.strandline.forgetAlphabet) return;
+  const btn = $('#shapeForget');
+  if(btn) btn.disabled = true;
+  try{
+    await window.strandline.forgetAlphabet();
+    const res = await vtStart();
+    if(res && res.rows && res.rows.length){ vtShow(res); toast('Remembered shapes cleared'); }
+    else { $('#shapeCard').style.display = 'none'; toast('Remembered shapes cleared'); }
+  }catch(err){
+    toast('Could not clear the remembered shapes');
+  }finally{ if($('#shapeForget')) $('#shapeForget').disabled = false; }
+}
+
 /* Ask for the line-work reading and put the naming panel up. Runs only when
    the text layer left something out, because a sheet whose columns are all
    live text has nothing here to do. */
@@ -5014,6 +5034,7 @@ function init(){
     $('#shapeClose') && $('#shapeClose').addEventListener('click', ()=>{
       $('#shapeCard').style.display = 'none';
     });
+    $('#shapeForget') && $('#shapeForget').addEventListener('click', vtForget);
     $('#stripNext').addEventListener('click', advance);
     $('#stripPrev').addEventListener('click', ()=>stripGo(AS.cursor - 1));
     $('#stripUnskip') && $('#stripUnskip').addEventListener('click', ()=>{
