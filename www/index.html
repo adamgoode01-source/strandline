@@ -3287,7 +3287,7 @@ function pullMsg(html, cls){
 /* Pre-fill every row from one read of the chosen table.
  *
  * This calls the API rather than reading locally. Local OCR was measured on
- * this exact table: 3 of 18 elongations exact and 11 confidently wrong, with
+ * this exact table: 5 of 18 elongations exact and 8 confidently wrong, with
  * the digit 5 read as 3 often enough that lengths came back plausible and
  * incorrect - "17 X 57A" as "17 X 37A". A wrong length passes the quantity
  * cross-check silently, so it would reach the record unnoticed. Pre-filling
@@ -3295,6 +3295,90 @@ function pullMsg(html, cls){
  *
  * Pulled values are marked amber and stay amber until the operator has been
  * on the row, so "filled in" never looks the same as "checked". */
+/* Write pulled values into the rows, and say how many landed.
+ *
+ * Only ever fills a cell that is empty. A pull must not overwrite something
+ * the operator typed, and the free text pass must not be undone by a later
+ * one. Blank values in the source are skipped rather than written through,
+ * so a source that carries only one column leaves the other two alone.
+ *
+ * Rows are matched to strips in printed order, skipping the bands that were
+ * flagged as headings. */
+function pullFill(rows, source){
+  let target = AS.rows.findIndex(r => !r.skip);
+  if(target < 0) target = 0;
+  const got = { bundle:0, qtyFt:0, elong:0 };
+  let touched = 0, used = 0;
+  for(const row of rows){
+    while(target < AS.rows.length && AS.rows[target].skip) target++;
+    if(target >= AS.rows.length) break;
+    used++;
+    const r = AS.rows[target];
+    const put = (key, val)=>{
+      if(val == null || String(val).trim() === '') return;
+      if(String(r[key] || '').trim() !== '') return;
+      r[key] = String(val).trim();
+      got[key]++;
+    };
+    const before = (r.bundle||'')+(r.qtyFt||'')+(r.elong||'');
+    put('bundle', row.bundle);
+    put('qtyFt', row.qtyFt);
+    put('elong', row.elongation == null ? null :
+      String(row.elongation).replace(/^\s*[D\u0394\u2206]?\s*=\s*/, '').trim());
+    if((r.bundle||'')+(r.qtyFt||'')+(r.elong||'') !== before){
+      r.pulled = true; r.seen = false; r.edited = false; r.pullSource = source;
+      touched++;
+    }
+    target++;
+  }
+  return { got, touched, used, extra: rows.length - used };
+}
+
+/* What is still missing across the data rows, so the operator is told which
+   columns they have left to type rather than a bare count. */
+function pullMissing(){
+  const data = AS.rows.filter(r => !r.skip);
+  return {
+    bundle: data.filter(r => !String(r.bundle||'').trim()).length,
+    qtyFt:  data.filter(r => !String(r.qtyFt||'').trim()).length,
+    elong:  data.filter(r => !String(r.elong||'').trim()).length,
+    rows: data.length
+  };
+}
+
+function pullRefresh(){
+  AS.cursor = AS.rows.findIndex(r => !r.skip);
+  if(AS.cursor < 0) AS.cursor = 0;
+  stripShow();
+  stripSummary();
+}
+
+const COLNAME = { bundle:'bundle numbers', qtyFt:'quantity and length cells', elong:'elongations' };
+function pullList(counts, keys){
+  return keys.filter(k => counts[k]).map(k => counts[k] + ' ' + COLNAME[k]).join(', ');
+}
+
+/* Wire whatever buttons the message just offered. */
+function pullWire(){
+  const add = $('#pullAddKey');
+  if(add) add.addEventListener('click', ()=>{
+    setView('home');
+    $('#officeKeyCard').style.display = '';
+    officeRefreshSettings();
+    $('#officeKeyCard').scrollIntoView({ block:'center' });
+    $('#officeKeyInput').focus();
+  });
+  const api = $('#pullWithApi');
+  if(api) api.addEventListener('click', ()=> stripPullApi());
+}
+
+/* The button the operator presses. Always tries the free reading first.
+ *
+ * The sheet's own text layer costs nothing, needs no key and cannot invent a
+ * value - it either carries the characters the detailer typed or it does not.
+ * On the Prado Lofts set that fills the bundle column exactly and leaves the
+ * other two, because they were exploded to line art. So the free pass runs
+ * every time, and the API is only ever offered for what is genuinely absent. */
 async function stripPull(){
   const pg = AS.pages.find(p=>p.page === AS.page);
   const c = pg && pg.candidates[AS.cand];
@@ -3302,74 +3386,125 @@ async function stripPull(){
   const btn = $('#rowPull');
   btn.disabled = true;
   pullMsg('');
-  $('#rowPullNote').textContent = 'Reading the table\u2026';
+  $('#rowPullNote').textContent = 'Reading the sheet\u2019s own text\u2026';
+  let res;
+  try{
+    res = await window.strandline.readTableText({ pdfPath: AS.pdf, page: AS.page, box: c.box });
+  }catch(err){ res = { error: (err && err.message) || String(err) }; }
+  finally{ btn.disabled = false; }
+  $('#rowPullNote').textContent = '';
+
+  if(!res || res.error){
+    pullMsg('<strong>Could not read the sheet\u2019s text.</strong> '+
+      esc((res && res.error) || 'no reply'), 'stop');
+    return;
+  }
+
+  const rows = (res.rows || []).filter(r => r.bundle || r.qtyFt || r.elongation);
+
+  /* Rows are matched to strips in printed order, so the two have to agree on
+     how many there are. If they do not, one extra line in the text layer - a
+     stray note, a wrapped cell, a row the segmenter merged - shifts every
+     value down one, and a bundle ends up beside another row's elongation.
+     Nothing about the result would look wrong. So the counts are checked, and
+     a mismatch fills nothing until the operator says to go ahead. */
+  const slots = AS.rows.filter(r => !r.skip).length;
+  if(rows.length && rows.length !== slots && !AS.pullForce){
+    pullMsg('<strong>The sheet’s text has ' + rows.length + ' row' +
+      (rows.length===1?'':'s') + ', but this table was cut into ' + slots + '.</strong> '+
+      'Filling them in order would put values on the wrong rows, so nothing was '+
+      'changed. Check which is right against the strips — a heading may have been '+
+      'counted as data, or a row merged — then fill anyway if the order lines up.'+
+      '<div class="btnrow" style="margin-top:10px">'+
+      '<button class="btn sm" id="pullAnyway">Fill in printed order anyway</button></div>', 'stop');
+    const any = $('#pullAnyway');
+    if(any) any.addEventListener('click', ()=>{ AS.pullForce = true; stripPull(); });
+    return;
+  }
+
+  const f = rows.length ? pullFill(rows, 'text') : { got:{bundle:0,qtyFt:0,elong:0}, touched:0, used:0, extra:0 };
+  AS.pullForce = false;
+  if(f.touched) pullRefresh();
+
+  const miss = pullMissing();
+  const filled = pullList(f.got, ['bundle','qtyFt','elong']);
+  const missing = pullList(miss, ['bundle','qtyFt','elong']);
+
+  let html;
+  if(!f.touched){
+    html = '<strong>This sheet carries no readable text in that table.</strong> '+
+      'The schedule was drawn as line art, so there are no characters to recover \u2014 '+
+      'nothing was filled in and nothing was guessed.';
+  } else if(!missing){
+    html = '<strong>Filled every row from the sheet\u2019s own text.</strong> '+
+      esc(filled) + '. These are the characters the detailer typed, not a reading of the '+
+      'picture, but step through them anyway and check the alignment against each strip.';
+  } else {
+    html = '<strong>Filled ' + esc(filled) + ' from the sheet\u2019s own text.</strong> '+
+      'Exact, and free \u2014 these are the characters the detailer typed. '+
+      'Still empty: ' + esc(missing) + ', because the sheet drew '+
+      (missing.indexOf(',') >= 0 ? 'those columns' : 'that column') +
+      ' as line art rather than text. Type them, or read them with the API.';
+  }
+
+  if(missing){
+    html += '<div class="btnrow" style="margin-top:10px">'+
+      '<button class="btn sm" id="pullWithApi">Read the rest with the API</button></div>';
+  }
+  pullMsg(html, f.touched ? '' : 'stop');
+  pullWire();
+  if(f.touched) toast(f.touched + ' rows filled from the sheet \u2014 check each one');
+}
+
+/* The paid pass, for the columns the sheet did not carry as text. Kept behind
+   its own press so nobody spends a call without meaning to. */
+async function stripPullApi(){
+  const pg = AS.pages.find(p=>p.page === AS.page);
+  const c = pg && pg.candidates[AS.cand];
+  if(!c){ toast('Pick a table first'); return; }
+  const btn = $('#pullWithApi');
+  if(btn) btn.disabled = true;
+  $('#rowPullNote').textContent = 'Reading the table with the API\u2026';
   let res;
   try{
     res = await window.strandline.readTable({ pdfPath: AS.pdf, page: AS.page, box: c.box });
-  }finally{ btn.disabled = false; }
+  }catch(err){ res = { error: (err && err.message) || String(err) }; }
+  finally{ if(btn) btn.disabled = false; }
+  $('#rowPullNote').textContent = '';
 
   if(res && res.error === 'no-key'){
-    $('#rowPullNote').textContent = '';
-    pullMsg('<strong>No API key saved.</strong> Pulling the data reads the table with the '+
-      'Claude API, which needs your own key. Reading it on this machine was measured against '+
-      'this very table and got 3 of 18 elongations right, with 11 confidently wrong, so it is '+
-      'not offered as a substitute. Keep typing the rows, or add a key.'+
+    pullMsg('<strong>No API key saved.</strong> Reading the columns this sheet drew as line '+
+      'art needs the Claude API and your own key. Reading them on this machine was measured '+
+      'against this very table and got 5 of 18 elongations right, with 8 confidently wrong, '+
+      'so it is not offered as a substitute \u2014 a plausible wrong elongation passes the '+
+      'quantity check silently. Type them, or add a key.'+
       '<div class="btnrow" style="margin-top:10px">'+
       '<button class="btn sm primary" id="pullAddKey">Add an API key</button></div>', 'stop');
-    const add = $('#pullAddKey');
-    if(add) add.addEventListener('click', ()=>{
-      setView('home');
-      $('#officeKeyCard').style.display = '';
-      officeRefreshSettings();
-      $('#officeKeyCard').scrollIntoView({ block:'center' });
-      $('#officeKeyInput').focus();
-    });
+    pullWire();
     return;
   }
   if(!res || res.error){
-    $('#rowPullNote').textContent = '';
     pullMsg('<strong>Could not read the table.</strong> '+esc((res && res.error) || 'no reply'), 'stop');
     return;
   }
 
   const rows = res.rows || [];
-  if(!rows.length){ $('#rowPullNote').textContent = 'Nothing readable in that table.'; return; }
-
-  /* The strips include heading rows; the read returns data rows only. Fill
-     from the first row not marked as a heading so the two line up. */
-  let target = AS.rows.findIndex(r => !r.skip);
-  if(target < 0) target = 0;
-  let filled = 0;
-  for(const row of rows){
-    while(target < AS.rows.length && AS.rows[target].skip) target++;
-    if(target >= AS.rows.length) break;
-    const r = AS.rows[target];
-    r.bundle = row.bundle == null ? '' : String(row.bundle);
-    r.qtyFt  = row.qtyFt  == null ? '' : String(row.qtyFt);
-    r.elong  = row.elongation == null ? '' : String(row.elongation).replace(/^\s*[D\u0394\u2206]?\s*=\s*/, '').trim();
-    r.pulled = true; r.seen = false; r.edited = false;
-    filled++; target++;
-  }
-
-  const extra = rows.length - filled;
-  $('#rowPullNote').textContent = filled + ' row' + (filled===1?'':'s') + ' filled in' +
-    (extra > 0 ? ', ' + extra + ' more than there are strips' : '');
-  AS.cursor = AS.rows.findIndex(r => !r.skip);
-  if(AS.cursor < 0) AS.cursor = 0;
-  stripShow();
-  stripSummary();
+  if(!rows.length){ pullMsg('<strong>Nothing readable in that table.</strong>', 'stop'); return; }
+  const f = pullFill(rows, 'api');
+  if(f.touched) pullRefresh();
 
   const unread = (res.unreadable || []);
-  pullMsg('<strong>Read ' + filled + ' rows.</strong> Every one is marked amber until you have '+
-    'been on it. Step through with Enter and check each against the strip above the fields \u2014 '+
-    'an elongation wrong by a sixteenth changes whether a tendon passes.' +
+  pullMsg('<strong>Read ' + f.touched + ' rows with the API.</strong> Every value it supplied is '+
+    'marked amber until you have been on its row. Step through with Enter and check each '+
+    'against the strip above the fields \u2014 an elongation wrong by a sixteenth changes '+
+    'whether a tendon passes.' +
     (unread.length ? '<div style="margin-top:8px"><strong>Not read with confidence:</strong><ul '+
       'style="margin:6px 0 0 18px;padding:0">' + unread.map(u=>'<li>'+esc(u)+'</li>').join('') +
       '</ul></div>' : '') +
-    (extra > 0 ? '<div style="margin-top:8px">The table had ' + extra + ' more rows than the '+
+    (f.extra > 0 ? '<div style="margin-top:8px">The table had ' + f.extra + ' more rows than the '+
       'segmentation found. Check the end of the table.</div>' : ''),
-    unread.length || extra > 0 ? 'stop' : '');
-  toast(filled + ' rows filled \u2014 check each one');
+    unread.length || f.extra > 0 ? 'stop' : '');
+  toast(f.touched + ' rows filled \u2014 check each one');
 }
 
 /* Segment the chosen table into row strips and start at the first one. */

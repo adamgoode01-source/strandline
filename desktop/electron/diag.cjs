@@ -55,10 +55,19 @@ async function runDiag(win, pdfPath, out) {
     return Promise.race([win.webContents.executeJavaScript(src, !!userGesture), capped])
       .finally(() => clearTimeout(timer));
   };
+  /* When a step does not come back, the renderer is usually not dead but
+     blocked, and nothing in the page can report that - every channel back
+     runs on the thread that is stuck. The window title is the exception: the
+     main process holds its own copy, so a step that sets it as it goes leaves
+     a trail that survives the lock-up. */
   const step = async (name, src) => {
     say(name, { started: true, finished: false });
     try { say(name, await run(src, true)); }
-    catch (e) { say(name, { failed: String((e && e.message) || e) }); }
+    catch (e) {
+      let lastMark = null;
+      try { lastMark = win.getTitle(); } catch (e2) {}
+      say(name, { failed: String((e && e.message) || e), lastMark });
+    }
   };
 
   try {
@@ -122,38 +131,81 @@ async function runDiag(win, pdfPath, out) {
       };
     })()`);
 
-    /* The pull button with no API key saved: it must explain rather than
-       silently fall back to local OCR, which was measured on this table at 3
-       of 18 elongations correct. The message has to land where the button is -
-       it used to be written to a card further down the screen, which is why
-       the button looked dead. */
-    await step('pull button without a key', `(async () => {
-      const before = AS.rows.map(r => r.bundle).join("|");
+    /* The pull button with no API key saved. It must still do the free half -
+       the sheet's own text layer - and on this set that is the whole bundle
+       column, exactly. The message has to land where the button is: it used to
+       be written to a card further down the screen, which is why the button
+       looked dead. */
+    const BUNDLES = JSON.stringify(PRADO_ROWS.map(r => r[0]));
+
+    /* Rows are matched to strips in printed order, so a count mismatch would
+       shift every value onto the wrong row - a bundle beside another row's
+       elongation, with nothing about the result looking wrong. Force the
+       mismatch and check the pull refuses rather than filling. */
+    await step('a row-count mismatch fills nothing', `(async () => {
+      const firstData = AS.rows.findIndex(r => !r.skip);
+      AS.rows[firstData].skip = true;          // 17 slots against 18 text rows
+      AS.pullForce = false;
       document.getElementById("rowPull").click();
-      await new Promise(r => setTimeout(r, 900));
-      const after = AS.rows.map(r => r.bundle).join("|");
+      await new Promise(r => setTimeout(r, 4000));
+      const msg = document.getElementById("rowPullMsg");
+      const out = {
+        nothingFilled: AS.rows.every(r => !(r.bundle || '').trim()),
+        message: ((msg && msg.innerText) || "").slice(0, 170),
+        offersToFillAnyway: !!document.getElementById("pullAnyway")
+      };
+      AS.rows[firstData].skip = false;         // put it back for the real pull
+      return out;
+    })()`);
+    await step('pull button without a key reads the text layer', `(async () => {
+      document.getElementById("rowPull").click();
+      await new Promise(r => setTimeout(r, 4000));
       const msg = document.getElementById("rowPullMsg");
       const btn = document.getElementById("rowPull");
+      const want = ${BUNDLES};
+      const data = AS.rows.filter(r => !r.skip);
       return {
-        rowsUnchanged: before === after,
         buttonReEnabled: !btn.disabled,
-        messageNextToButton: ((msg && msg.innerText) || "").slice(0, 150),
+        bundlesFilled: data.filter(r => (r.bundle || '').trim()).length,
+        bundlesExact: data.filter((r, i) => r.bundle === want[i]).length,
+        outOf: want.length,
+        // the two columns this sheet drew as line art must stay empty
+        qtyLeftEmpty: data.every(r => !(r.qtyFt || '').trim()),
+        elongLeftEmpty: data.every(r => !(r.elong || '').trim()),
+        markedUnverified: data.filter(r => r.pulled && !r.seen).length,
+        messageNextToButton: ((msg && msg.innerText) || "").slice(0, 180),
         messageIsVisible: (() => {
           if (!msg || !msg.innerText.trim()) return false;
           const screen = document.querySelector(".screen.on");
           return msg.getBoundingClientRect().height > 0 && screen && screen.contains(msg);
         })(),
-        pixelsFromButton: (() => {
-          if (!msg || !btn) return null;
-          return Math.round(msg.getBoundingClientRect().top - btn.getBoundingClientRect().bottom);
-        })(),
+        pixelsFromButton: (!msg || !btn) ? null :
+          Math.round(msg.getBoundingClientRect().top - btn.getBoundingClientRect().bottom),
+        apiOfferedForTheRest: !!document.getElementById("pullWithApi"),
+        stillOnProjectScreen: document.querySelector(".screen.on").id === "s-project"
+      };
+    })()`);
+
+    /* Pressing the API offer with no key must explain, not fall back to local
+       OCR - measured on this very table at 5 of 18 elongations exact and 8
+       confidently wrong. It must also leave the free values alone. */
+    await step('the API offer with no key explains itself', `(async () => {
+      const api = document.getElementById("pullWithApi");
+      if (!api) return { skipped: "no API offer button" };
+      const before = AS.rows.map(r => r.bundle).join("|");
+      api.click();
+      await new Promise(r => setTimeout(r, 1200));
+      const msg = document.getElementById("rowPullMsg");
+      return {
+        freeValuesKept: AS.rows.map(r => r.bundle).join("|") === before,
+        message: ((msg && msg.innerText) || "").slice(0, 160),
         addKeyButtonOffered: !!document.getElementById("pullAddKey"),
         stillOnProjectScreen: document.querySelector(".screen.on").id === "s-project"
       };
     })()`);
 
-    /* The key card the button offers is on the home screen. Revealing it from
-       here without navigating was the other half of the bug, so press the
+    /* The key card the offer points at is on the home screen. Revealing it
+       from here without navigating was the other half of the bug, so press the
        offer and check we actually arrive somewhere the operator can type. */
     await step('the offered key card is reachable', `(async () => {
       const add = document.getElementById("pullAddKey");
@@ -187,12 +239,18 @@ async function runDiag(win, pdfPath, out) {
       const seen = [];
       for (let i = 0; i < rows.length && i < AS.strips.length; i++) {
         seen.push(document.getElementById('stripPos').textContent);
+        document.title = 'diag row ' + i + ' bundle';
         type('rowBundle', rows[i][0]);
+        document.title = 'diag row ' + i + ' qty';
         type('rowQty', rows[i][1]);
+        document.title = 'diag row ' + i + ' elong';
         type('rowElong', rows[i][2]);
+        document.title = 'diag row ' + i + ' enter';
         enter('rowElong');
+        document.title = 'diag row ' + i + ' done';
         await new Promise(r => setTimeout(r, 10));
       }
+      document.title = 'diag typing finished';
       const ex = asExpand();
       return {
         positionsVisited: seen.length,

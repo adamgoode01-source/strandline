@@ -437,9 +437,24 @@ ipcMain.handle('segment-table', async (e, { pdfPath, page, box }) => {
    the strip beside it.
 
    This uses the API rather than local OCR because local OCR was measured on
-   this same table and is not fit for it - 3 of 18 elongations exact, 11
+   this same table and is not fit for it - 5 of 18 elongations exact, 8
    confidently wrong, with 5 read as 3 so lengths come back plausible and
    incorrect. A wrong length passes the quantity cross-check silently. */
+/* The free half of the pull: whatever the sheet carries as live text.
+   No key, no network, no OCR. Columns that were exploded to line art come
+   back empty rather than guessed. */
+ipcMain.handle('read-table-text', async (e, { pdfPath, page, box }) => {
+  if (!pdfPath || !fs.existsSync(pdfPath)) return { error: 'That file could not be found.' };
+  try {
+    const r = await import(pathToFileURL(path.join(__dirname, '..', 'render.mjs')).href);
+    const tt = await import(pathToFileURL(path.join(__dirname, '..', 'table-text.mjs')).href);
+    const doc = await r.openPdf(pdfPath);
+    return await tt.readTableText(doc, page, box);
+  } catch (err) {
+    return { error: (err && err.message) || String(err) };
+  }
+});
+
 ipcMain.handle('read-table', async (e, { pdfPath, page, box }) => {
   const key = loadApiKey();
   if (!key) return { error: 'no-key' };

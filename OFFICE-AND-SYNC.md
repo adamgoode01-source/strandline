@@ -45,18 +45,46 @@ silently changes whether a tendon passes, and nobody catches that by glancing
 at a grid that looks filled in. `desktop/cell-read.mjs` keeps the code and the
 reasons in its header so it is not rediscovered from scratch.
 
-**The reader** (below) is the optional accelerator: it pre-fills the same rows
-using the Claude API, for anyone who has a key and wants to skip the typing.
+**Pull the data from this table** is the free accelerator, and it runs first
+every time. It reads the sheet's own text layer — no key, no network, no OCR.
+Whatever the detailer left as live characters comes back exactly; whatever was
+exploded to line art comes back empty. It never fills a cell it did not read,
+and never overwrites one you typed.
+
+How much that gets you depends entirely on the sheet. On the Prado Lofts set
+it fills the **bundle column 18 of 18 exact** and nothing else, because that
+sheet drew the quantity and elongation columns as line art. A third of the
+typing gone, for free, with no possibility of a wrong value. Other sets carry
+all three columns; some carry none. The message under the button says which
+columns it actually got and which you still have to type.
+
+**The reader** is the paid accelerator, offered only for the columns the free
+pass could not recover: it reads them with the Claude API, and needs your own
+key. Values it supplies are marked amber until you have been on the row.
 
 ## Why the reader exists
 
-PT shop drawings are exported with the text converted to outlines. The
-schedule on the sheet is line art, not characters, so no PDF parser can read
-it — this was measured on the Prado Lofts set: 627,217 line segments against
-606 text operations, and only 1,012 of those segments were glyph-scale.
+PT shop drawings are usually exported with the schedule's text converted to
+outlines — line art, not characters. On the Prado Lofts set that is 627,217
+line segments against 606 text operations.
 
-The reader sidesteps that by rendering the sheet and *looking* at it. Vision
-reads pixels, so how the text got onto the page stops mattering.
+It is not all-or-nothing, though, and an earlier version of this note was
+wrong to say no PDF parser can read these sheets. Detailers explode some
+columns and not others. On that same sheet the bundle column survived as live
+text and `desktop/table-text.mjs` recovers it exactly, while the quantity and
+elongation columns really are pictures. So the free text pass is always worth
+running, and the API is only worth paying for on what it leaves behind.
+
+The reader sidesteps line art by rendering the sheet and *looking* at it.
+Vision reads pixels, so how the text got onto the page stops mattering.
+
+### The one rule the text reader follows
+
+It will not accept a value it cannot prove. An elongation is taken only as a
+fraction, or as a whole number the sheet itself marked with an inch symbol or
+a delta. A bare trailing integer is rejected — drawings are full of loose
+digits, and one of them sits on row 7 of this very schedule, where accepting
+it read 2" against a true 10-1/8". Blank is recoverable; wrong is not.
 
 ### Division of labour
 
@@ -222,7 +250,8 @@ Organisations are isolated by token; one cannot read another's projects.
 cd desktop
 node test-reader.mjs      # 49  fractions, bundle expansion, guards
 node test-import.mjs      # 19  the app importing a real reader file
-cd ..server
+node test-table-text.mjs  # 30  the free text-layer read, and what it refuses
+cd ../server
 node test-server.mjs      # 38  auth, roles, merge, conflicts, isolation
 ```
 
