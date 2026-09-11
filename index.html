@@ -3280,16 +3280,54 @@ function pullMsg(html, cls){
  *
  * Rows are matched to strips in printed order, skipping the bands that were
  * flagged as headings. */
+/* Which strip is a value actually printed on?
+ *
+ * Matching by printed order was wrong, and wrong in the worst way: it needed
+ * two independent counts - lines in the text layer, bands found by the
+ * segmenter - to agree, and when they did not, every value slid onto its
+ * neighbour's row. A bundle beside another row's elongation looks entirely
+ * ordinary, and the guard offered to do it anyway on request.
+ *
+ * Position settles it instead. Each text line knows its y on the sheet and
+ * each strip knows the band it was cut from, so a value goes where it is
+ * printed or it goes nowhere. Counts no longer have to agree, and a row the
+ * segmenter missed costs that one row rather than corrupting the rest. */
+function pullRowFor(y){
+  if(y == null) return -1;
+  let best = -1, bestGap = Infinity;
+  for(let i = 0; i < AS.rows.length; i++){
+    const st = AS.strips[i];
+    if(!st || st.y0 == null) continue;
+    if(y >= st.y0 && y <= st.y1) return i;
+    // just outside a band: allow the nearest one within a third of its height
+    const gap = y < st.y0 ? st.y0 - y : y - st.y1;
+    const slack = (st.y1 - st.y0) / 3;
+    if(gap < slack && gap < bestGap){ best = i; bestGap = gap; }
+  }
+  return best;
+}
+
 function pullFill(rows, source){
-  let target = AS.rows.findIndex(r => !r.skip);
-  if(target < 0) target = 0;
   const got = { bundle:0, qtyFt:0, elong:0 };
-  let touched = 0, used = 0;
+  let touched = 0, placed = 0;
+  const unplaced = [], ontoHeading = [];
+  const taken = new Set();
+
   for(const row of rows){
-    while(target < AS.rows.length && AS.rows[target].skip) target++;
-    if(target >= AS.rows.length) break;
-    used++;
-    const r = AS.rows[target];
+    const i = pullRowFor(row.y);
+    if(i < 0){ unplaced.push(row.text || row.bundle || '(blank)'); continue; }
+    /* Two text lines landing on one strip means the segmenter merged rows.
+       Filling the first and dropping the second would hide that, so neither
+       is written and both are reported. */
+    if(taken.has(i)){ unplaced.push(row.text || row.bundle || '(blank)'); continue; }
+    taken.add(i);
+    const r = AS.rows[i];
+    if(!r) continue;
+    /* A value printed on a band the segmenter called a heading means the
+       guess was wrong. Take the value and un-skip the row. */
+    if(r.skip){ r.skip = false; ontoHeading.push(i + 1); }
+    placed++;
+
     const put = (key, val)=>{
       if(val == null || String(val).trim() === '') return;
       if(String(r[key] || '').trim() !== '') return;
@@ -3305,9 +3343,61 @@ function pullFill(rows, source){
       r.pulled = true; r.seen = false; r.edited = false; r.pullSource = source;
       touched++;
     }
-    target++;
   }
-  return { got, touched, used, extra: rows.length - used };
+  return { got, touched, placed, unplaced, ontoHeading };
+}
+
+/* The API read has no coordinates - it is a transcription of a picture, in
+   printed order - so it cannot be placed by position. Two anchors are tried,
+   and if neither holds, nothing is written.
+ *
+ *  1. Bundle numbers already on the rows. The free text pass puts those there
+ *     by position, so matching on them carries that placement across and is
+ *     immune to a miscounted row.
+ *  2. Failing that, order - but only when the counts agree exactly. There is
+ *     no override: filling in order across a known mismatch is what put values
+ *     on the wrong rows in the first place.
+ */
+function pullFillOrdered(rows, source){
+  const norm = s => String(s||'').toUpperCase().replace(/\s+/g,' ').trim();
+  const slots = [];
+  AS.rows.forEach((r,i)=>{ if(!r.skip) slots.push(i); });
+
+  const byBundle = new Map();
+  slots.forEach(i => { const b = norm(AS.rows[i].bundle); if(b && !byBundle.has(b)) byBundle.set(b, i); });
+  const hits = rows.filter(row => byBundle.has(norm(row.bundle))).length;
+
+  let pairs = null;
+  if(byBundle.size && hits >= Math.ceil(rows.length * 0.8)){
+    pairs = rows.map(row => [byBundle.has(norm(row.bundle)) ? byBundle.get(norm(row.bundle)) : -1, row]);
+  } else if(rows.length === slots.length){
+    pairs = rows.map((row, n) => [slots[n], row]);
+  }
+  if(!pairs) return { matched: false, slots: slots.length, rows: rows.length };
+
+  const got = { bundle:0, qtyFt:0, elong:0 };
+  let touched = 0; const unplaced = [];
+  for(const [i, row] of pairs){
+    if(i < 0){ unplaced.push(row.bundle || '(blank)'); continue; }
+    const r = AS.rows[i];
+    const put = (key, val)=>{
+      if(val == null || String(val).trim() === '') return;
+      if(String(r[key] || '').trim() !== '') return;
+      r[key] = String(val).trim();
+      got[key]++;
+    };
+    const before = (r.bundle||'')+(r.qtyFt||'')+(r.elong||'');
+    put('bundle', row.bundle);
+    put('qtyFt', row.qtyFt);
+    put('elong', row.elongation == null ? null :
+      String(row.elongation).replace(/^\s*[DΔ∆]?\s*=\s*/, '').trim());
+    if((r.bundle||'')+(r.qtyFt||'')+(r.elong||'') !== before){
+      r.pulled = true; r.seen = false; r.edited = false; r.pullSource = source;
+      touched++;
+    }
+  }
+  return { matched: true, anchor: byBundle.size && hits >= Math.ceil(rows.length*0.8) ? 'bundle' : 'order',
+           got, touched, unplaced };
 }
 
 /* What is still missing across the data rows, so the operator is told which
@@ -3378,28 +3468,11 @@ async function stripPull(){
 
   const rows = (res.rows || []).filter(r => r.bundle || r.qtyFt || r.elongation);
 
-  /* Rows are matched to strips in printed order, so the two have to agree on
-     how many there are. If they do not, one extra line in the text layer - a
-     stray note, a wrapped cell, a row the segmenter merged - shifts every
-     value down one, and a bundle ends up beside another row's elongation.
-     Nothing about the result would look wrong. So the counts are checked, and
-     a mismatch fills nothing until the operator says to go ahead. */
-  const slots = AS.rows.filter(r => !r.skip).length;
-  if(rows.length && rows.length !== slots && !AS.pullForce){
-    pullMsg('<strong>The sheet’s text has ' + rows.length + ' row' +
-      (rows.length===1?'':'s') + ', but this table was cut into ' + slots + '.</strong> '+
-      'Filling them in order would put values on the wrong rows, so nothing was '+
-      'changed. Check which is right against the strips — a heading may have been '+
-      'counted as data, or a row merged — then fill anyway if the order lines up.'+
-      '<div class="btnrow" style="margin-top:10px">'+
-      '<button class="btn sm" id="pullAnyway">Fill in printed order anyway</button></div>', 'stop');
-    const any = $('#pullAnyway');
-    if(any) any.addEventListener('click', ()=>{ AS.pullForce = true; stripPull(); });
-    return;
-  }
-
-  const f = rows.length ? pullFill(rows, 'text') : { got:{bundle:0,qtyFt:0,elong:0}, touched:0, used:0, extra:0 };
-  AS.pullForce = false;
+  /* No count check and no override. Each value is placed by where it is
+     printed, so two counts no longer have to agree, and there is nothing to
+     force. What could not be placed is named instead of guessed at. */
+  const f = rows.length ? pullFill(rows, 'text')
+    : { got:{bundle:0,qtyFt:0,elong:0}, touched:0, placed:0, unplaced:[], ontoHeading:[] };
   if(f.touched) pullRefresh();
 
   const miss = pullMissing();
@@ -3423,11 +3496,33 @@ async function stripPull(){
       ' as line art rather than text. Type them, or read them with the API.';
   }
 
+  /* Anything the placement could not account for is named. These are the
+     cases that used to slide silently onto the wrong row. */
+  let warned = false;
+  if(f.unplaced && f.unplaced.length){
+    warned = true;
+    html += '<div style="margin-top:8px"><strong>' + f.unplaced.length + ' line' +
+      (f.unplaced.length===1?'':'s') + ' could not be placed on a row</strong> and ' +
+      (f.unplaced.length===1?'was':'were') + ' left out — the row was merged with '+
+      'another, or sits outside the table that was cut. Check these against the '+
+      'strips and type them where they belong:<ul style="margin:6px 0 0 18px;padding:0">' +
+      f.unplaced.slice(0, 8).map(u=>'<li>'+esc(String(u).slice(0,60))+'</li>').join('') +
+      (f.unplaced.length > 8 ? '<li>and ' + (f.unplaced.length - 8) + ' more</li>' : '') +
+      '</ul></div>';
+  }
+  if(f.ontoHeading && f.ontoHeading.length){
+    warned = true;
+    html += '<div style="margin-top:8px">Row' + (f.ontoHeading.length===1?' ':'s ') +
+      f.ontoHeading.join(', ') + ' had been marked as a heading but carries printed '+
+      'data, so ' + (f.ontoHeading.length===1?'it has':'they have') + ' been turned '+
+      'back into ' + (f.ontoHeading.length===1?'a data row':'data rows') + '.</div>';
+  }
+
   if(missing){
     html += '<div class="btnrow" style="margin-top:10px">'+
       '<button class="btn sm" id="pullWithApi">Read the rest with the API</button></div>';
   }
-  pullMsg(html, f.touched ? '' : 'stop');
+  pullMsg(html, (!f.touched || warned) ? 'stop' : '');
   pullWire();
   if(f.touched) toast(f.touched + ' rows filled from the sheet \u2014 check each one');
 }
@@ -3466,7 +3561,15 @@ async function stripPullApi(){
 
   const rows = res.rows || [];
   if(!rows.length){ pullMsg('<strong>Nothing readable in that table.</strong>', 'stop'); return; }
-  const f = pullFill(rows, 'api');
+  const f = pullFillOrdered(rows, 'api');
+  if(!f.matched){
+    pullMsg('<strong>The API read ' + f.rows + ' row' + (f.rows===1?'':'s') +
+      ', but this table was cut into ' + f.slots + ' and nothing lines them up.</strong> '+
+      'Filling them in order would put values on the wrong rows, so nothing was changed. '+
+      'Type the bundle numbers first \u2014 once those are on the rows, a second read can be '+
+      'matched to them and placed safely.', 'stop');
+    return;
+  }
   if(f.touched) pullRefresh();
 
   const unread = (res.unreadable || []);
@@ -3474,12 +3577,16 @@ async function stripPullApi(){
     'marked amber until you have been on its row. Step through with Enter and check each '+
     'against the strip above the fields \u2014 an elongation wrong by a sixteenth changes '+
     'whether a tendon passes.' +
+    (f.anchor === 'bundle' ? ' Rows were matched on the bundle numbers already in place.'
+                           : ' Rows were matched in printed order, the counts agreeing exactly.') +
     (unread.length ? '<div style="margin-top:8px"><strong>Not read with confidence:</strong><ul '+
       'style="margin:6px 0 0 18px;padding:0">' + unread.map(u=>'<li>'+esc(u)+'</li>').join('') +
       '</ul></div>' : '') +
-    (f.extra > 0 ? '<div style="margin-top:8px">The table had ' + f.extra + ' more rows than the '+
-      'segmentation found. Check the end of the table.</div>' : ''),
-    unread.length || f.extra > 0 ? 'stop' : '');
+    (f.unplaced.length ? '<div style="margin-top:8px"><strong>' + f.unplaced.length +
+      ' row' + (f.unplaced.length===1?'':'s') + ' had no match and ' +
+      (f.unplaced.length===1?'was':'were') + ' left out:</strong> ' +
+      esc(f.unplaced.slice(0,8).join(', ')) + '</div>' : ''),
+    unread.length || f.unplaced.length ? 'stop' : '');
   toast(f.touched + ' rows filled \u2014 check each one');
 }
 

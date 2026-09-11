@@ -138,23 +138,34 @@ async function runDiag(win, pdfPath, out) {
        looked dead. */
     const BUNDLES = JSON.stringify(PRADO_ROWS.map(r => r[0]));
 
-    /* Rows are matched to strips in printed order, so a count mismatch would
-       shift every value onto the wrong row - a bundle beside another row's
-       elongation, with nothing about the result looking wrong. Force the
-       mismatch and check the pull refuses rather than filling. */
-    await step('a row-count mismatch fills nothing', `(async () => {
+    /* The failure that was reported: the counts disagreed, and filling in
+       printed order put every value on the wrong row. Reproduce the mismatch
+       - mark a real data row as a heading, so there are 17 slots against 18
+       printed lines - and assert the values still land where they are
+       printed. Placement is by position now, so a miscounted row costs
+       nothing and the mismatch is no longer dangerous. */
+    await step('values land correctly despite a row-count mismatch', `(async () => {
+      const want = ${BUNDLES};
       const firstData = AS.rows.findIndex(r => !r.skip);
-      AS.rows[firstData].skip = true;          // 17 slots against 18 text rows
-      AS.pullForce = false;
+      AS.rows[firstData].skip = true;          // 17 slots against 18 printed lines
       document.getElementById("rowPull").click();
       await new Promise(r => setTimeout(r, 4000));
+      const data = AS.rows.filter(r => !r.skip);
       const msg = document.getElementById("rowPullMsg");
       const out = {
-        nothingFilled: AS.rows.every(r => !(r.bundle || '').trim()),
-        message: ((msg && msg.innerText) || "").slice(0, 170),
-        offersToFillAnyway: !!document.getElementById("pullAnyway")
+        slotsBeforePull: 17,
+        rowsCarryingData: data.length,
+        bundlesExact: data.filter((r, i) => r.bundle === want[i]).length,
+        outOf: want.length,
+        headingReclaimed: !AS.rows[firstData].skip,
+        noBlindOverrideOffered: !document.getElementById("pullAnyway"),
+        message: ((msg && msg.innerText) || "").slice(0, 200)
       };
-      AS.rows[firstData].skip = false;         // put it back for the real pull
+      // reset for the clean pull that follows
+      AS.rows.forEach((r, i) => { r.bundle = ''; r.qtyFt = ''; r.elong = '';
+        r.pulled = false; r.seen = false; r.skip = !!AS.strips[i].likelyHeader; });
+      AS.cursor = AS.rows.findIndex(r => !r.skip);
+      stripShow();
       return out;
     })()`);
     await step('pull button without a key reads the text layer', `(async () => {

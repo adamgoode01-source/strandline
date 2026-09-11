@@ -410,7 +410,12 @@ ipcMain.handle('segment-table', async (e, { pdfPath, page, box }) => {
         .jpeg({ quality: 90 }).toBuffer();
       strips.push({
         image: 'data:image/jpeg;base64,' + jpeg.toString('base64'),
-        likelyHeader: crossings(band) < typical
+        likelyHeader: crossings(band) < typical,
+        /* Where this band actually sits on the sheet, as page fractions. The
+           text-layer pull uses it to put each value on the row it is printed
+           on, instead of trusting that two independent counts agree. */
+        y0: by + band.y0 / meta.height,
+        y1: by + band.y1 / meta.height
       });
     }
 

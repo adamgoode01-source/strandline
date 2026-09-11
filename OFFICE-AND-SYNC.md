@@ -78,13 +78,34 @@ running, and the API is only worth paying for on what it leaves behind.
 The reader sidesteps line art by rendering the sheet and *looking* at it.
 Vision reads pixels, so how the text got onto the page stops mattering.
 
-### The one rule the text reader follows
+### The two rules the text reader follows
 
-It will not accept a value it cannot prove. An elongation is taken only as a
-fraction, or as a whole number the sheet itself marked with an inch symbol or
-a delta. A bare trailing integer is rejected — drawings are full of loose
+**It will not accept a value it cannot prove.** An elongation is taken only as
+a fraction, or as a whole number the sheet itself marked with an inch symbol
+or a delta. A bare trailing integer is rejected — drawings are full of loose
 digits, and one of them sits on row 7 of this very schedule, where accepting
 it read 2" against a true 10-1/8". Blank is recoverable; wrong is not.
+
+**It places values by where they are printed, never by order.** Each text line
+knows its position on the sheet and each row strip knows the band it was cut
+from, so a value goes onto the row it belongs to or onto no row at all.
+
+This replaced a first attempt that matched in printed order, checked that the
+counts agreed, and offered to fill anyway when they did not. Taking that
+override put every value one row out — a bundle beside another row's
+elongation, with nothing about the result looking wrong. It was reported from
+the field on the Prado POUR 1 sheet and the override is gone.
+
+Positional placement means the counts no longer have to agree at all. A band
+the segmenter merged, or mis-flagged as a heading, costs that one row and is
+named in the message rather than corrupting everything below it. Verified on
+that sheet with the counts deliberately broken — 17 row slots against 18
+printed lines — still placing 18 of 18 correctly.
+
+The API read has no coordinates, being a transcription of a picture, so it is
+anchored to the bundle numbers the free pass has already placed. Failing that
+it falls back to order, and only when the counts agree exactly. If neither
+holds it writes nothing — there is no override.
 
 ### Division of labour
 
