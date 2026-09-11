@@ -499,6 +499,23 @@ hr.r{border:0;border-top:1px solid var(--rule);margin:14px 0}
 .homehead p{margin:2px 0 0;color:var(--ink-3);font-size:12px;
   text-transform:uppercase;letter-spacing:.08em}
 .crumb{padding:12px 20px 0}
+.striprow{border:1px solid var(--rule);background:#fff;padding:8px;margin-top:10px}
+.striprow img{display:block;width:100%;height:auto}
+.stripnav{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px}
+.stripnav .pos{font-family:var(--f-cond);font-weight:700;font-size:12px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink-2);min-width:110px}
+.stripnav .sp{flex:1}
+.dots{display:flex;gap:3px;flex-wrap:wrap;margin-top:10px}
+.dots button{width:20px;height:20px;padding:0;border:1px solid var(--rule);background:var(--surface-2);
+  font-family:var(--f-mono);font-size:9px;color:var(--ink-3);cursor:pointer;line-height:1}
+.dots button.done{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.dots button.bad{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.dots button.now{outline:2px solid var(--accent);outline-offset:1px}
+.rowfields{display:grid;grid-template-columns:1.4fr 1fr 1fr auto;gap:10px;align-items:end;margin-top:12px}
+@media (max-width:900px){ .rowfields{grid-template-columns:1fr} }
+.rowfields .tally{font-family:var(--f-mono);font-size:12px;color:var(--ink-3);white-space:nowrap;padding-bottom:8px}
+.overview{border:1px solid var(--rule);background:#fff;padding:4px;max-width:240px}
+.overview img{display:block;width:100%;height:auto}
 .assist{display:grid;grid-template-columns:minmax(280px,1fr) minmax(320px,1fr);gap:16px;align-items:start}
 @media (max-width:1100px){ .assist{grid-template-columns:1fr} }
 .assist .sheet{border:1px solid var(--rule);background:#fff;padding:6px;position:sticky;top:8px}
@@ -687,6 +704,46 @@ table.entry td.out{font-family:var(--f-mono);font-size:11px;color:var(--ink-3);w
             <select id="assistPage"></select></label>
           <div class="eyebrow" style="margin-top:10px">Tables found &mdash; pick the schedule</div>
           <div class="cands" id="assistCands"></div>
+        </div>
+
+        <div id="assistRowWork" style="display:none;margin-top:16px">
+          <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+            <div style="flex:1;min-width:320px">
+              <div class="eyebrow">The row as printed</div>
+              <div class="striprow"><img id="stripImg" alt="one row of the schedule, magnified"></div>
+              <div class="rowfields">
+                <label class="f"><span>Bundle no.</span>
+                  <input id="rowBundle" autocapitalize="characters" spellcheck="false"></label>
+                <label class="f"><span>Qty &times; ft</span>
+                  <input id="rowQty" autocapitalize="characters" spellcheck="false"></label>
+                <label class="f"><span>Elongation</span>
+                  <input id="rowElong" spellcheck="false"></label>
+                <div class="tally" id="rowTally"></div>
+              </div>
+              <div class="stripnav">
+                <span class="pos" id="stripPos"></span>
+                <button class="btn sm ghost" id="stripPrev">&larr; Back</button>
+                <button class="btn sm primary" id="stripNext">Next &rarr;</button>
+                <span class="sp"></span>
+                <button class="btn sm ghost" id="stripSkip">Not a data row</button>
+              </div>
+              <div class="dots" id="stripDots"></div>
+              <div class="note" style="margin-top:12px">Enter moves to the next row. Ranges are fine
+                &mdash; <code>300 THRU 308</code> or <code>372 AND 373</code>. Keep the letter on the
+                length (<code>9 X 34A</code>): it is the anchorage type and tells the crew which end to pull.</div>
+            </div>
+            <div>
+              <div class="eyebrow">Whole table</div>
+              <div class="overview"><img id="overviewImg" alt="the whole schedule"></div>
+              <div class="btnrow" style="margin-top:10px">
+                <button class="btn sm ghost" id="assistShowGrid">Show all rows at once</button>
+              </div>
+            </div>
+          </div>
+          <div id="rowSummary" style="margin-top:14px"></div>
+          <div class="btnrow" style="margin-top:12px">
+            <button class="btn primary" id="rowCreate">Create the form</button>
+          </div>
         </div>
 
         <div id="assistWork" style="display:none;margin-top:16px">
@@ -2914,7 +2971,7 @@ let panel = 'setup';
    a sheet to a handful of candidates and the person picks from thumbnails.
    Choosing for them would be right most of the time and quietly wrong the
    rest, on the numbers the record is judged by. */
-const AS = { pdf: null, pages: [], page: null, cand: null, rows: [] };
+const AS = { pdf: null, pages: [], page: null, cand: null, rows: [], strips: [], cursor: 0 };
 const AS_MIN_ROWS = 6;
 
 function asBlankRow(){ return { bundle:'', qtyFt:'', elong:'' }; }
@@ -2991,6 +3048,7 @@ function asExpand(){
   const seen = new Set();
   let statedTotal = 0;
   AS.rows.forEach((r,i)=>{
+    if(!r || r.skip) return;
     if(!(r.bundle || r.qtyFt || r.elong)) return;
     const where = 'row '+(i+1);
     const b = parseBundleSafe(r.bundle);
@@ -3085,11 +3143,148 @@ async function asChoose(i){
   if(r.error){ asShowStatus('Could not crop that region: '+esc(r.error), 'stop'); return; }
   asShowStatus('');
   $('#assistImg').src = r.image;
-  $('#assistWork').style.display = '';
-  if(!AS.rows.length) AS.rows = [];
-  asRenderTable();
-  asRenderSummary();
-  $('#assistWork').scrollIntoView({ block:'start' });
+  // Row by row is the primary path; the all-rows grid stays as a fallback for
+  // a table the segmentation cannot separate.
+  const ok = await stripStart();
+  if(!ok){
+    $('#assistWork').style.display = '';
+    if(!AS.rows.length) AS.rows = [];
+    asRenderTable();
+    asRenderSummary();
+    $('#assistWork').scrollIntoView({ block:'start' });
+  }
+}
+
+/* ---------- row by row entry ----------
+   The segmentation isolates each row reliably, so the operator reads one
+   magnified strip at a time rather than hunting across a dense table. Enter
+   advances. This replaced local per-digit OCR, which was measured on this same
+   schedule at 5 of 18 exact and, worse, 8 of 18 confidently wrong - a
+   plausible elongation wrong by a sixteenth silently changes whether a tendon
+   passes, and nobody catches that by glancing at a grid that looks filled in.
+   A person reading a magnified strip does not make that class of error. */
+function rowsEntered(){
+  return AS.rows.filter(r => r && (r.bundle || r.qtyFt || r.elong)).length;
+}
+
+function stripRenderDots(){
+  const host = $('#stripDots');
+  if(!host) return;
+  host.innerHTML = AS.strips.map((_,i)=>{
+    const r = AS.rows[i] || {};
+    const filled = r.bundle || r.qtyFt || r.elong;
+    const b = filled ? parseBundleSafe(r.bundle) : null;
+    const q = filled ? parseQtyFtSafe(r.qtyFt) : null;
+    const bad = filled && (!b || !q || (q.qty != null && b && q.qty !== b.count));
+    const cls = r.skip ? '' : (bad ? 'bad' : (filled ? 'done' : ''));
+    return '<button data-strip="'+i+'" class="'+cls+(i===AS.cursor?' now':'')+'" '+
+      'title="row '+(i+1)+'">'+(r.skip?'\u2013':(i+1))+'</button>';
+  }).join('');
+  $$('#stripDots button').forEach(b=>b.addEventListener('click', ()=>stripGo(+b.dataset.strip)));
+}
+
+function stripShow(){
+  if(!AS.strips.length) return;
+  const i = AS.cursor;
+  $('#stripImg').src = AS.strips[i].image;
+  const r = AS.rows[i] || (AS.rows[i] = { bundle:'', qtyFt:'', elong:'' });
+  $('#rowBundle').value = r.bundle || '';
+  $('#rowQty').value = r.qtyFt || '';
+  $('#rowElong').value = r.elong || '';
+  $('#stripPos').textContent = 'Row ' + (i+1) + ' of ' + AS.strips.length +
+    (r.skip ? ' — not data' : '');
+  $('#stripPrev').disabled = i === 0;
+  $('#stripNext').disabled = i >= AS.strips.length - 1;
+  stripRenderTally();
+  stripRenderDots();
+  stripSummary();
+}
+
+function stripRenderTally(){
+  const r = AS.rows[AS.cursor] || {};
+  const b = parseBundleSafe(r.bundle);
+  const q = parseQtyFtSafe(r.qtyFt);
+  const e = parseLen(r.elong);
+  let msg = '';
+  if(r.bundle || r.qtyFt || r.elong){
+    if(!b) msg = 'bundle unreadable';
+    else if(!q) msg = 'qty unreadable';
+    else if(q.qty != null && q.qty !== b.count) msg = q.qty + ' stated, range covers ' + b.count;
+    else msg = b.count + (b.count===1 ? ' tendon' : ' tendons') +
+      (isFinite(e) ? ' at ' + fmtFrac(e,16) + '"' : ', no elongation');
+  }
+  $('#rowTally').textContent = msg;
+  const flag = (el, ok) => { if(el) el.classList.toggle('bad', !ok); };
+  flag($('#rowBundle'), !r.bundle || !!b);
+  flag($('#rowQty'), !r.qtyFt || !!q);
+  flag($('#rowElong'), !r.elong || isFinite(e));
+}
+
+function stripCapture(){
+  const r = AS.rows[AS.cursor] || (AS.rows[AS.cursor] = {});
+  r.bundle = $('#rowBundle').value;
+  r.qtyFt = $('#rowQty').value;
+  r.elong = $('#rowElong').value;
+  if(r.bundle || r.qtyFt || r.elong) r.skip = false;
+}
+
+function stripGo(i){
+  stripCapture();
+  AS.cursor = Math.max(0, Math.min(AS.strips.length - 1, i));
+  stripShow();
+  $('#rowBundle').focus();
+}
+
+function stripSummary(){
+  const el = $('#rowSummary');
+  if(!el) return;
+  const { tendons, problems, statedTotal } = asExpand();
+  const done = rowsEntered();
+  const skipped = AS.rows.filter(r=>r && r.skip).length;
+  const left = AS.strips.length - done - skipped;
+  const errs = problems.filter(p=>p.level==='error');
+  let html = '<div class="note'+(errs.length?' stop':'')+'"><strong>'+
+    done+' of '+AS.strips.length+' rows entered</strong>'+
+    (skipped ? ', '+skipped+' not data' : '')+
+    (left > 0 ? ', '+left+' to go' : '')+'. '+
+    tendons.length+' tendon'+(tendons.length===1?'':'s')+' so far';
+  if(statedTotal) html += ' &mdash; the sheet\u2019s quantities add to '+statedTotal+
+    (statedTotal===tendons.length ? ', which agrees' : ', which does not agree yet');
+  html += '.';
+  if(errs.length) html += '<ul style="margin:8px 0 0 18px;padding:0">'+
+    errs.map(p=>'<li>'+esc(p.msg)+'</li>').join('')+'</ul>';
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+/* Segment the chosen table into row strips and start at the first one. */
+async function stripStart(){
+  const pg = AS.pages.find(p=>p.page === AS.page);
+  const c = pg && pg.candidates[AS.cand];
+  if(!c) return false;
+  asShowStatus('Cutting that table into rows\u2026');
+  const r = await window.strandline.segmentTable({ pdfPath: AS.pdf, page: AS.page, box: c.box });
+  if(r.error){ asShowStatus('Could not separate the rows: '+esc(r.error)+
+    ' You can still use the all-rows grid below.', 'stop'); return false; }
+  asShowStatus('');
+  AS.strips = r.strips;
+  // Bands with no column separators are merged title cells. Pre-marked as not
+  // data so the operator is not asked to transcribe the table's own heading,
+  // and reversible from the row itself if the guess is wrong.
+  AS.rows = AS.strips.map(st => ({ bundle:'', qtyFt:'', elong:'', skip: !!st.likelyHeader }));
+  const preSkipped = AS.strips.filter(st => st.likelyHeader).length;
+  AS.cursor = 0;
+  $('#overviewImg').src = r.overview;
+  $('#assistRowWork').style.display = '';
+  $('#assistWork').style.display = 'none';
+  // start on the first row that is not pre-skipped
+  AS.cursor = AS.rows.findIndex(r => !r.skip);
+  if(AS.cursor < 0) AS.cursor = 0;
+  stripShow();
+  $('#assistRowWork').scrollIntoView({ block:'start' });
+  $('#rowBundle').focus();
+  if(preSkipped) toast(preSkipped + ' heading row' + (preSkipped===1?'':'s') + ' skipped');
+  return true;
 }
 
 /* ---------- desktop (Electron) ----------
@@ -4194,14 +4389,52 @@ function init(){
     if(panel==='tendons') renderTendons();
     if(panel==='review') renderReview();
   });
+  /* ---------- row by row entry ---------- */
+  if(isDesktop()){
+    const advance = () => {
+      stripCapture();
+      if(AS.cursor < AS.strips.length - 1) stripGo(AS.cursor + 1);
+      else { stripShow(); toast('That was the last row'); }
+    };
+    ['rowBundle','rowQty','rowElong'].forEach(id=>{
+      const el = $('#'+id);
+      el.addEventListener('input', ()=>{ stripCapture(); stripRenderTally(); stripRenderDots(); stripSummary(); });
+      el.addEventListener('keydown', e=>{
+        if(e.key === 'Enter'){ e.preventDefault(); advance(); }
+        // Shift+Tab out of the first field goes back a row
+        if(e.key === 'Tab' && e.shiftKey && id === 'rowBundle' && AS.cursor > 0){
+          e.preventDefault(); stripGo(AS.cursor - 1);
+        }
+      });
+    });
+    $('#stripNext').addEventListener('click', advance);
+    $('#stripPrev').addEventListener('click', ()=>stripGo(AS.cursor - 1));
+    $('#stripUnskip') && $('#stripUnskip').addEventListener('click', ()=>{
+      const r = AS.rows[AS.cursor]; if(r){ r.skip = false; stripShow(); $('#rowBundle').focus(); }
+    });
+    $('#stripSkip').addEventListener('click', ()=>{
+      const r = AS.rows[AS.cursor] || (AS.rows[AS.cursor] = {});
+      r.bundle = ''; r.qtyFt = ''; r.elong = ''; r.skip = true;
+      if(AS.cursor < AS.strips.length - 1) stripGo(AS.cursor + 1); else stripShow();
+    });
+    $('#assistShowGrid').addEventListener('click', ()=>{
+      $('#assistWork').style.display = '';
+      asRenderTable(); asRenderSummary();
+      $('#assistWork').scrollIntoView({ block:'start' });
+    });
+    $('#rowCreate').addEventListener('click', ()=>$('#assistCreate').click());
+  }
+
   /* ---------- assisted entry ---------- */
   if(isDesktop()){
     $('#assistPick').addEventListener('click', async ()=>{
       const pdf = await window.strandline.pickPdf();
       if(!pdf) return;
-      AS.pdf = pdf; AS.pages = []; AS.page = null; AS.cand = null; AS.rows = [];
+      AS.pdf = pdf; AS.pages = []; AS.page = null; AS.cand = null;
+      AS.rows = []; AS.strips = []; AS.cursor = 0;
       $('#assistPages').style.display = 'none';
       $('#assistWork').style.display = 'none';
+      $('#assistRowWork').style.display = 'none';
       $('#assistReset').style.display = '';
       asShowStatus('Reading the sheets\u2026');
       const stop = window.strandline.onScanProgress(m=>{
@@ -4226,15 +4459,19 @@ function init(){
       asRenderPages();
     });
     $('#assistReset').addEventListener('click', ()=>{
-      AS.pdf = null; AS.pages = []; AS.page = null; AS.cand = null; AS.rows = [];
+      AS.pdf = null; AS.pages = []; AS.page = null; AS.cand = null;
+      AS.rows = []; AS.strips = []; AS.cursor = 0;
       $('#assistPages').style.display = 'none';
       $('#assistWork').style.display = 'none';
+      $('#assistRowWork').style.display = 'none';
       $('#assistReset').style.display = 'none';
       asShowStatus('');
     });
     $('#assistPage').addEventListener('change', e=>{
       AS.page = +e.target.value; AS.cand = null;
+      AS.strips = []; AS.cursor = 0;
       $('#assistWork').style.display = 'none';
+      $('#assistRowWork').style.display = 'none';
       asRenderCands();
     });
     $('#assistAddRow').addEventListener('click', ()=>{ AS.rows.push(asBlankRow()); asRenderTable(); });

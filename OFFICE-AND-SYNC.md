@@ -19,9 +19,14 @@ and the server works whether the schedule was read by machine or typed in.
 
 **Assisted entry** is the default and needs nothing external — no key, no
 network, nothing leaves the machine. Strandline finds the ruled tables on each
-sheet, shows you the one you pick at full size, and you read the rows off it.
-The expansion into individual tendons, the cross-check against the sheet’s
-stated quantities, and the form are automatic.
+sheet, and once you pick the schedule it cuts that table into rows and shows
+you **one magnified row at a time** with three fields beneath it. Enter moves
+to the next. Heading rows are skipped for you.
+
+Each row tells you what it expands to as you type — "9 tendons at 2-1/2\"" —
+and says so immediately if the stated quantity disagrees with the bundle range.
+The expansion into individual tendons, the running cross-check against the
+sheet’s totals, and the form are automatic.
 
 That split is deliberate. A person has to check every elongation regardless —
 each one decides whether a tendon passes — so the reading was never the part
@@ -32,10 +37,13 @@ Detection narrows a sheet to a handful of candidates and **you** pick which is
 the schedule. Choosing automatically would be right most of the time and
 quietly wrong the rest, on the numbers the record is judged by.
 
-Local OCR was measured and rejected: Tesseract managed 52% confidence on the
-real schedule, and cell by cell with a digit whitelist it read `4 1/4` as
-`41/` and `4 3/4` as nothing at all. Stacked fractions are not a text line,
-and a fraction wrong by a sixteenth changes the answer.
+Local OCR was built properly and then rejected on measurement. Against the 18
+cells of this schedule whose correct values are known it returned **5 exact, 8
+confidently wrong, 5 blank**. The blanks are harmless; the wrong ones are
+disqualifying — "6-5/8" in place of "6-3/8" is a plausible elongation that
+silently changes whether a tendon passes, and nobody catches that by glancing
+at a grid that looks filled in. `desktop/cell-read.mjs` keeps the code and the
+reasons in its header so it is not rediscovered from scratch.
 
 **The reader** (below) is the optional accelerator: it pre-fills the same rows
 using the Claude API, for anyone who has a key and wants to skip the typing.

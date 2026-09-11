@@ -156,7 +156,7 @@ app.whenReady().then(() => {
       await runDiag(win, process.env.STRANDLINE_DIAG, process.env.STRANDLINE_DIAG_OUT || "diag.json");
       app.exit(0);
     }, 1500));
-    setTimeout(() => app.exit(1), 180000);
+    setTimeout(() => app.exit(1), 300000);
   }
   if (process.env.STRANDLINE_SMOKE) {
     const wc = win.webContents;
@@ -325,6 +325,91 @@ ipcMain.handle('crop-region', async (e, { pdfPath, page, box }) => {
     }).resize(1400, null, { fit: 'inside', kernel: 'lanczos3', withoutEnlargement: false })
       .jpeg({ quality: 92 }).toBuffer();
     return { image: 'data:image/jpeg;base64,' + jpeg.toString('base64') };
+  } catch (err) {
+    return { error: (err && err.message) || String(err) };
+  }
+});
+
+/* Cuts the chosen table into one image per row, so the operator reads a
+   magnified strip instead of a dense table. Local: render, segment, crop. */
+ipcMain.handle('segment-table', async (e, { pdfPath, page, box }) => {
+  if (!pdfPath || !fs.existsSync(pdfPath)) return { error: 'That file could not be found.' };
+  try {
+    const r = await import(pathToFileURL(path.join(__dirname, '..', 'render.mjs')).href);
+    const seg = await import(pathToFileURL(path.join(__dirname, '..', 'cell-segment.mjs')).href);
+    const sharp = require(path.join(__dirname, '..', 'node_modules', 'sharp'));
+
+    const doc = await r.openPdf(pdfPath);
+    const { png } = await r.renderPage(doc, page, 4.0);
+    const meta = await sharp(png).metadata();
+    const pad = 0.004;
+    const bx = Math.max(0, box.x - pad), by = Math.max(0, box.y - pad);
+    const bw = Math.min(1 - bx, box.w + pad * 2), bh = Math.min(1 - by, box.h + pad * 2);
+    const crop = await sharp(png).extract({
+      left: Math.round(meta.width * bx), top: Math.round(meta.height * by),
+      width: Math.max(8, Math.round(meta.width * bw)), height: Math.max(8, Math.round(meta.height * bh))
+    }).greyscale().png().toBuffer();
+
+    const grey = await seg.loadGrey(crop);
+    const { cols } = seg.findColumns(grey);
+    if (cols.length < 2) return { error: 'No column rules found in that region.' };
+    const classes = seg.classifyColumns(grey, cols);
+    // Rows are projected from the columns that are not chained hexagons.
+    const numeric = classes.filter(c => !c.chained).map(c => c.index);
+    const rows = seg.findRows(grey, cols, numeric.length ? numeric : cols.map((_, i) => i));
+    const dataRows = rows.filter(r => !r.isRule);
+    if (!dataRows.length) return { error: 'No rows could be separated in that region.' };
+
+    /* Heading rows are told apart by how many column separators cross them.
+       A data row is crossed by all of them; the header by fewer, because the
+       columns only start below the title; the title by fewer still, being a
+       merged cell. Testing for zero crossings was too strict - the title here
+       is still clipped by one rule that runs high - so the count is calibrated
+       against the most common value instead, which is by definition a data
+       row since they are the overwhelming majority.
+
+       Flagged, not dropped. It is a suggestion the operator reverses simply
+       by typing in the row, and guessing wrong about which bands hold data
+       would be worse than the one click it saves. */
+    const internal = cols.slice(1, -1).map(c => c.x0);
+    const crossings = (band) => internal.filter(x => {
+      let ink = 0;
+      for (let y = band.y0; y < band.y1; y++) if (grey.data[y * grey.W + x] < 150) ink++;
+      return ink > (band.y1 - band.y0) * 0.6;
+    }).length;
+    const counts = dataRows.map(crossings);
+    const tally = new Map();
+    counts.forEach(n => tally.set(n, (tally.get(n) || 0) + 1));
+    let typical = 0, best = -1;
+    for (const [n, c] of tally) if (c > best || (c === best && n > typical)) { best = c; typical = n; }
+
+    const strips = [];
+    for (const band of dataRows) {
+      const vpad = Math.round((band.y1 - band.y0) * 0.35);
+      const b = seg.clampExtract({
+        left: 0, top: band.y0 - vpad,
+        width: grey.W, height: (band.y1 - band.y0) + vpad * 2
+      }, grey.W, grey.H);
+      const jpeg = await sharp(crop).extract(b)
+        .resize({ width: 1280, fit: 'inside', kernel: 'lanczos3', withoutEnlargement: false })
+        .jpeg({ quality: 90 }).toBuffer();
+      strips.push({
+        image: 'data:image/jpeg;base64,' + jpeg.toString('base64'),
+        likelyHeader: crossings(band) < typical
+      });
+    }
+
+    // A small overview of the whole table, for context above the strip.
+    const overview = await sharp(crop)
+      .resize({ width: 460, fit: 'inside', kernel: 'lanczos3' })
+      .jpeg({ quality: 82 }).toBuffer();
+
+    return {
+      strips,
+      overview: 'data:image/jpeg;base64,' + overview.toString('base64'),
+      columns: cols.length,
+      headerRows: rows.length - dataRows.length
+    };
   } catch (err) {
     return { error: (err && err.message) || String(err) };
   }

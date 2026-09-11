@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('strandline', {
   // Assisted entry: scanning and cropping are local, no API involved.
   scanPlans: opts => ipcRenderer.invoke('scan-plans', opts),
   cropRegion: opts => ipcRenderer.invoke('crop-region', opts),
+  segmentTable: opts => ipcRenderer.invoke('segment-table', opts),
   onScanProgress: cb => {
     const h = (e, msg) => cb(msg);
     ipcRenderer.on('scan-progress', h);
