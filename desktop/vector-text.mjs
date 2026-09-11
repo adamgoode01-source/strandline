@@ -142,7 +142,11 @@ function glyphStrokes(strokes, box) {
      characters merge into one shape. */
   const shortish = heights.filter(h => h < box.h * 0.06);
   const ch = shortish.length ? shortish[Math.floor(shortish.length * 0.5)] : heights[0];
-  const keep = within.filter(s => s.h <= ch * 1.6 && s.w <= ch * 1.6);
+  /* Up to two and a half character heights, because a fraction's solidus is
+     drawn full height across a raised numerator and a dropped denominator.
+     Capping at 1.6 threw it away, and without it "7/8" has nothing to divide
+     it and reads as one run of digits. */
+  const keep = within.filter(s => s.h <= ch * 2.5 && s.w <= ch * 1.6);
   return { strokes: keep, ch };
 }
 
@@ -152,8 +156,18 @@ function glyphStrokes(strokes, box) {
  * they belong to instead of inventing baselines of their own. Inside a row,
  * characters are split at horizontal gaps. */
 function buildGlyphs(strokes, ch) {
-  const glyphs = [];
-  const byX = strokes.slice().sort((a, b) => a.x0 - b.x0);
+  /* The solidus comes out first. It is drawn as one tall diagonal across both
+     halves of the fraction, so it overlaps its own digits in x - left in the
+     grouping below it welds numerator, slash and denominator into a single
+     shape, which is how "7/8" came back as one unnameable blob. */
+  const solidi = strokes.filter(s =>
+    s.h > ch * 1.35 && s.w < ch * 0.9 && s.pts.length <= 3);
+  const rest = strokes.filter(s => !solidi.includes(s));
+
+  const glyphs = solidi.map(s => ({
+    ss: [s], x0: s.x0, y0: s.y0, x1: s.x1, y1: s.y1, w: s.w, h: s.h, solidus: true
+  }));
+  const byX = rest.slice().sort((a, b) => a.x0 - b.x0);
   let group = null;
   /* Measured on this lettering: strokes belonging to one character overlap or
      touch (the bar of an "A" sits inside it, the two diagonals of an "X" share
@@ -175,8 +189,8 @@ function buildGlyphs(strokes, ch) {
       x0 = Math.min(x0, s.x0); x1 = Math.max(x1, s.x1);
       y0 = Math.min(y0, s.y0); y1 = Math.max(y1, s.y1);
     }
-    return { ss: g.ss, x0, y0, x1, y1, w: x1 - x0, h: y1 - y0 };
-  });
+    return { ss: g.ss, x0, y0, x1, y1, w: x1 - x0, h: y1 - y0, solidus: !!g.solidus };
+  }).sort((a, b) => a.x0 - b.x0);
 }
 
 export const GW = 10, GH = 14;
@@ -234,21 +248,49 @@ export function clusterGlyphs(glyphs, tol = 6) {
    fraction bar; the caller never has to know the layout. */
 export function cellSequence(glyphs, ch) {
   if (!glyphs.length) return [];
-  const bars = glyphs.filter(g => g.h < ch * 0.2 && g.w > ch * 0.3);
-  const rest = glyphs.filter(g => !bars.includes(g));
   const seq = [];
+  const slash = glyphs.find(g => g.solidus);
 
-  const whole = rest.filter(g => !bars.some(b => g.x1 > b.x0 - ch * 0.1 && g.x0 < b.x1 + ch * 0.1));
-  whole.sort((a, b) => a.x0 - b.x0).forEach(g => seq.push({ cluster: g.cluster, glyph: g }));
-
-  for (const bar of bars.sort((a, b) => a.x0 - b.x0)) {
-    const over = rest.filter(g => g.x1 > bar.x0 - ch * 0.1 && g.x0 < bar.x1 + ch * 0.1 && g.y1 <= bar.y0 + ch * 0.15);
-    const under = rest.filter(g => g.x1 > bar.x0 - ch * 0.1 && g.x0 < bar.x1 + ch * 0.1 && g.y0 >= bar.y1 - ch * 0.15);
-    if (!over.length && !under.length) continue;       // a rule, not a fraction
-    over.sort((a, b) => a.x0 - b.x0).forEach(g => seq.push({ cluster: g.cluster, glyph: g }));
-    seq.push({ solidus: true });
-    under.sort((a, b) => a.x0 - b.x0).forEach(g => seq.push({ cluster: g.cluster, glyph: g }));
+  /* No fraction: everything is on one line, in reading order. */
+  if (!slash) {
+    glyphs.slice().sort((a, b) => a.x0 - b.x0)
+      .forEach(g => seq.push({ cluster: g.cluster, part: 'main', glyph: g }));
+    return seq;
   }
+
+  /* A fraction here is written on the diagonal - a raised numerator, a full
+     height solidus, a dropped denominator - so which half a digit belongs to
+     is decided by height, not by which side of a bar it sits on. The baseline
+     is taken from the full-size characters, which are the ones outside the
+     fraction.
+   *
+   * The part tags matter downstream. "2", "1", "2" flattened to a string is
+   * "212" or "21/2" depending on how it is joined, and neither says whether
+   * the sheet meant 2-1/2 or 21/2. */
+  const full = glyphs.filter(g => !g.solidus && g.h > ch * 0.7);
+  const mids = (full.length ? full : glyphs).map(g => (g.y0 + g.y1) / 2).sort((a, b) => a - b);
+  const base = mids[Math.floor(mids.length / 2)];
+
+  /* Height alone is not enough to say which half a character belongs to. The
+     inch mark after the fraction sits high too, and was being read as a second
+     numerator digit. A numerator also has to end before the solidus does, and
+     a denominator to start after it begins. */
+  const slack = ch * 0.1;
+  const num = [], den = [], main = [];
+  for (const g of glyphs) {
+    if (g.solidus) continue;
+    const mid = (g.y0 + g.y1) / 2;
+    const raised = mid < base - ch * 0.18;
+    const dropped = mid > base + ch * 0.18;
+    if (raised && g.x1 <= slash.x1 + slack && g.x1 > slash.x0 - ch * 1.2) num.push(g);
+    else if (dropped && g.x0 >= slash.x0 - slack && g.x0 < slash.x1 + ch * 1.2) den.push(g);
+    else main.push(g);
+  }
+
+  main.sort((a, b) => a.x0 - b.x0).forEach(g => seq.push({ cluster: g.cluster, part: 'main', glyph: g }));
+  num.sort((a, b) => a.x0 - b.x0).forEach(g => seq.push({ cluster: g.cluster, part: 'num', glyph: g }));
+  seq.push({ solidus: true, part: 'solidus' });
+  den.sort((a, b) => a.x0 - b.x0).forEach(g => seq.push({ cluster: g.cluster, part: 'den', glyph: g }));
   return seq;
 }
 
@@ -376,4 +418,51 @@ export function renderCell(seq, names) {
     out += (n == null || n === '') ? '·' : n;
   }
   return out;
+}
+
+const UNNAMED = '·';
+
+/* A quantity cell as the rest of the app expects it: "9 X 34A".
+   Returns null unless every character in the cell has a name - a partly read
+   quantity is worse than none, because the count is cross-checked against the
+   bundle range and a missing digit would fail that check for the wrong
+   reason. */
+export function cellAsQty(seq, names) {
+  const s = renderCell(seq, names);
+  if (!s || s.includes(UNNAMED)) return null;
+  const m = /^(\d{1,3})[Xx](\d{1,4})([A-Za-z]{0,2})$/.exec(s.replace(/\s+/g, ''));
+  return m ? m[1] + ' X ' + m[2] + m[3].toUpperCase() : null;
+}
+
+/* An elongation cell as inches: "2 1/2".
+ *
+ * The delta, the equals sign and the inch mark are printed but carry no
+ * value, so they are dropped once named. What is left has to be digits in the
+ * three places the layout already told us about. */
+export function cellAsElongation(seq, names) {
+  const part = p => seq.filter(i => i.part === p && !i.solidus)
+    .map(i => names[i.cluster]).join('');
+  const anyUnnamed = seq.some(i => !i.solidus && (names[i.cluster] == null || names[i.cluster] === ''));
+  if (anyUnnamed) return null;
+
+  const main = part('main').replace(/[^0-9]/g, '');
+  const num = part('num').replace(/[^0-9]/g, '');
+  const den = part('den').replace(/[^0-9]/g, '');
+
+  if (num && den) return (main ? main + ' ' : '') + num + '/' + den;
+  if (main) return main;
+  return null;
+}
+
+/* A shape, as lines that can be drawn at any size. The operator is naming
+   these by eye, so they have to be legible - a 10x14 bitmap is enough to
+   match shapes but not enough to read one. */
+export function clusterOutline(cluster) {
+  const gl = cluster.members[0];
+  const w = Math.max(gl.w, 1e-9), h = Math.max(gl.h, 1e-9);
+  const lines = gl.ss.map(s => s.pts.map(([x, y]) => [
+    +(((x - gl.x0) / w) * 100).toFixed(1),
+    +(((y - gl.y0) / h) * 100).toFixed(1)
+  ]));
+  return { lines, aspect: +(w / h).toFixed(3) };
 }

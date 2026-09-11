@@ -61,6 +61,15 @@ async function runDiag(win, pdfPath, out) {
      main process holds its own copy, so a step that sets it as it goes leaves
      a trail that survives the lock-up. */
   const step = async (name, src) => {
+    /* Parse it here first. Electron reports a syntax error in injected source
+       as "Script failed to execute", with no line and nothing a try/catch in
+       the page can reach - so the check happens where the message is useful. */
+    try { new (require('node:vm').Script)(src, { filename: 'diag:' + name }); }
+    catch (e) {
+      try { fs.writeFileSync(out + ".badsrc", src); } catch (e2) {}
+      say(name, { syntaxError: String((e && e.message) || e), sourceWrittenTo: out + ".badsrc" });
+      return;
+    }
     say(name, { started: true, finished: false });
     try { say(name, await run(src, true)); }
     catch (e) {
@@ -86,6 +95,14 @@ async function runDiag(win, pdfPath, out) {
       await new Promise(r => setTimeout(r, 250));
       return { projects: DB.projects.length, onScreen: document.querySelector('.screen.on').id,
                assistCardVisible: document.getElementById('assistCard').style.display !== 'none' };
+    })()`);
+
+    /* Start from no remembered alphabet. The shape names are saved on purpose
+       so a second sheet needs no naming, which means a previous run's names
+       are recalled and this run would test nothing. */
+    await step('forget any remembered alphabet', `(async () => {
+      if(!window.strandline.forgetAlphabet) return { skipped: true };
+      return (await window.strandline.forgetAlphabet()) || {};
     })()`);
 
     if (!(pdfPath && fs.existsSync(pdfPath))) { say('assisted entry', { skipped: 'no pdf' }); return log; }
@@ -231,6 +248,130 @@ async function runDiag(win, pdfPath, out) {
         cardOnThatScreen: !!(card && screen.contains(card)),
         cardShown: !!(card && card.style.display !== 'none' && card.getBoundingClientRect().height > 0),
         inputFocused: document.activeElement === input
+      };
+    })()`);
+
+    /* The line-work reader. The sheet draws QTY and elongation rather than
+       typing them, so the text pull leaves both blank; this is the pass that
+       recovers them with no key. Nothing may be named by the app itself
+       beyond what the bundle counts prove. */
+    await step('the line-work shapes come up for naming', `(async () => {
+      const card = document.getElementById("shapeCard");
+      const inputs = Array.prototype.slice.call(document.querySelectorAll("#shapeGrid input"));
+      return {
+        panelShown: !!card && card.style.display !== 'none',
+        shapes: VT.clusters.length,
+        characters: VT.rows.reduce((a,r)=>a+r.cells.reduce((b,c)=>b+c.seq.length,0),0),
+        rows: VT.rows.length,
+        learnedFree: Object.keys(VT.learned).length,
+        conflicts: (VT.conflicts||[]).length,
+        stillToName: VT.clusters.filter(c=>VT.names[c.id]==null).length,
+        inputsRendered: inputs.length,
+        // nothing may be filled in before the operator has named anything
+        rowsStillEmpty: AS.rows.every(r => !(r.qtyFt||'').trim() && !(r.elong||'').trim())
+      };
+    })()`);
+
+    /* Name the shapes the way a person would - by typing into the boxes -
+       then assert the rows resolve to what the sheet says. The names below
+       are read off the drawing; the app is not told any row's value. */
+    await step('naming the shapes resolves the rows', `(async () => {
+     try {
+      const truth = ${JSON.stringify(PRADO_ROWS)};
+      /* Work out each shape's character from the rows it appears in, using
+         only the printed values a person would be reading off the sheet. */
+      const want = {};   // cluster id -> character
+      /* Line each read row up with the sheet by the bundle already sitting on
+         it, not by counting. VT.rows covers every band including the two
+         headings, so index alignment silently teaches the wrong characters -
+         which is exactly what it did the first time this ran. */
+      const truthFor = (row) => {
+        const i = pullRowFor((row.y0 + row.y1) / 2);
+        const r = i >= 0 ? AS.rows[i] : null;
+        const b = r && (r.bundle || "").trim();
+        return b ? truth.find(t => t[0] === b) : null;
+      };
+      /* The quantity cell is unambiguous - every character in it is printed on
+         one line - so it is what the digits and letters are learned from. */
+      VT.rows.forEach((row) => {
+        const t = truthFor(row); if(!t) return;
+        const q = row.cells.find(c=>c.col===1);
+        if(q){
+          const chars = t[1].replace(/\\s+/g,"").split("");   // "9X34A"
+          const seq = q.seq.filter(x=>!x.solidus);
+          if(seq.length === chars.length) seq.forEach((x,k)=>{ want[x.cluster] = chars[k]; });
+        }
+        /* The fraction halves are one digit each and the layout already says
+           which is which, so they can be named directly. */
+        const e = row.cells.find(c=>c.col===2);
+        if(e){
+          const m = /^(?:(\\d+)\\s+)?(\\d+)\\/(\\d+)$/.exec(t[2]);
+          if(m){
+            const num = e.seq.filter(x=>x.part==="num" && !x.solidus);
+            const den = e.seq.filter(x=>x.part==="den" && !x.solidus);
+            if(num.length === m[2].length) num.forEach((x,k)=>{ want[x.cluster] = m[2][k]; });
+            if(den.length === m[3].length) den.forEach((x,k)=>{ want[x.cluster] = m[3][k]; });
+          }
+        }
+      });
+      /* Whatever is left in an elongation cell is the delta, the equals sign
+         and the inch mark - printed, but carrying no value. A person naming
+         shapes writes those down too; the reader strips anything that is not
+         a digit out of each part. */
+      VT.rows.forEach((row) => {
+        const e = row.cells.find(c=>c.col===2); if(!e) return;
+        e.seq.forEach(x => {
+          if(x.solidus) return;
+          if(want[x.cluster] == null && VT.names[x.cluster] == null) want[x.cluster] = "D";
+        });
+      });
+
+      // type them into the real inputs
+      let typed = 0;
+      Array.prototype.slice.call(document.querySelectorAll("#shapeGrid input")).forEach(el=>{
+        const id = el.dataset.shape;
+        if(VT.names[id] != null || want[id] == null) return;
+        el.value = want[id];
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        typed++;
+      });
+      await new Promise(r => setTimeout(r, 200));
+      return {
+        shapesTyped: typed,
+        namedNow: Object.keys(VT.names).length,
+        preview: (document.getElementById("shapePrev").textContent || '').split('\\n').slice(0,4)
+      };
+     } catch (err) {
+      return { threw: String((err && err.message) || err),
+               where: String((err && err.stack) || '').split('\\n').slice(0,3).join(' | ') };
+     }
+    })()`);
+
+    await step('filling the rows from the line-work', `(async () => {
+      const truth = ${JSON.stringify(PRADO_ROWS)};
+      document.getElementById("shapeApply").click();
+      await new Promise(r => setTimeout(r, 700));
+      const data = AS.rows.filter(r => !r.skip);
+      let qtyRight = 0, qtyWrong = [], elongRight = 0, elongWrong = [], blank = 0;
+      data.forEach((r, i) => {
+        /* Compare each row against the sheet row its own bundle names, so a
+           heading that was reclaimed does not shift the whole comparison. */
+        const t = truth.find(x => x[0] === (r.bundle || "").trim()); if(!t) return;
+        if(!(r.qtyFt||'').trim() && !(r.elong||'').trim()){ blank++; return; }
+        if((r.qtyFt||'').trim()){
+          if(r.qtyFt === t[1]) qtyRight++; else qtyWrong.push((i+1)+': "'+r.qtyFt+'" vs "'+t[1]+'"');
+        }
+        if((r.elong||'').trim()){
+          if(r.elong === t[2]) elongRight++; else elongWrong.push((i+1)+': "'+r.elong+'" vs "'+t[2]+'"');
+        }
+      });
+      return {
+        quantitiesCorrect: qtyRight, quantitiesWrong: qtyWrong,
+        elongationsCorrect: elongRight, elongationsWrong: elongWrong,
+        rowsLeftBlank: blank,
+        bundlesStillIntact: data.filter(r => truth.some(t => t[0] === (r.bundle||"").trim())).length,
+        markedUnverified: data.filter(r=>r.pulled && !r.seen).length,
+        message: (document.getElementById("rowPullMsg").innerText || '').slice(0,200)
       };
     })()`);
 

@@ -445,6 +445,125 @@ ipcMain.handle('segment-table', async (e, { pdfPath, page, box }) => {
    this same table and is not fit for it - 5 of 18 elongations exact, 8
    confidently wrong, with 5 read as 3 so lengths come back plausible and
    incorrect. A wrong length passes the quantity cross-check silently. */
+/* The columns the sheet exported as line-work. No key, no network, no OCR -
+   the strokes are exact geometry, so identical characters are identical
+   shapes. Nothing is named here except what the sheet proves about itself;
+   the rest goes back to the operator to name once. */
+/* The clusters from the table most recently read, so the operator's names can
+   be attached to shapes when they save. Ids only mean something within one
+   reading, which is why the shapes themselves are what gets stored. */
+let lastVectorClusters = null;
+
+function hammingB64(b64, bytes) {
+  const a = Buffer.from(b64, 'base64');
+  if (a.length !== bytes.length) return Infinity;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) if (a[i] !== bytes[i]) d++;
+  return d;
+}
+
+ipcMain.handle('read-table-vector', async (e, { pdfPath, page, box, rowBands, names }) => {
+  if (!pdfPath || !fs.existsSync(pdfPath)) return { error: 'That file could not be found.' };
+  try {
+    const r = await import(pathToFileURL(path.join(__dirname, '..', 'render.mjs')).href);
+    const vt = await import(pathToFileURL(path.join(__dirname, '..', 'vector-text.mjs')).href);
+    const tt = await import(pathToFileURL(path.join(__dirname, '..', 'table-text.mjs')).href);
+    const ex = await import(pathToFileURL(path.join(__dirname, '..', 'expand.mjs')).href);
+    const doc = await r.openPdf(pdfPath);
+
+    /* Bands come from the strips the operator is stepping through; without
+       them the stacked halves of a fraction each look like a row. */
+    let bands = Array.isArray(rowBands) && rowBands.length ? rowBands : null;
+    const txt = await tt.readTableText(doc, page, box);
+    const textRows = txt.rows.filter(x => x.bundle).sort((a, b) => a.y - b.y);
+    if (!bands && textRows.length > 1) {
+      const ys = textRows.map(x => x.y);
+      const pitch = (ys[ys.length - 1] - ys[0]) / (ys.length - 1);
+      bands = ys.map(y => ({ y0: y - pitch * 0.62, y1: y + pitch * 0.42 }));
+    }
+
+    const V = await vt.readVectorTable(doc, page, box, { rowBands: bands, tol: 14 });
+    if (!V.rows.length) return { rows: [], clusters: [], learned: {}, conflicts: [] };
+
+    /* Line up the text rows with the bands so the counts land on the right
+       rows even when the two disagree about how many there are. */
+    const bundleFor = V.rows.map(row => {
+      const hit = textRows.find(t => t.y >= row.y0 && t.y <= row.y1);
+      return hit ? hit.bundle : null;
+    });
+    const learn = vt.learnFromCounts(V, bundleFor, b => {
+      const p = b ? ex.parseBundle(b) : null;
+      return p && p.count ? p.count : null;
+    });
+
+    /* Shapes named on an earlier sheet are recognised again here. A detailer's
+       lettering does not change between sheets, so the second schedule from
+       the same office asks for nothing. Matching is on the shape itself, since
+       cluster numbering is particular to one table. */
+    lastVectorClusters = V.clusters.map(c => ({ id: c.id, bitmap: c.bitmap, ar: c.ar }));
+    const saved = readSettings().alphabet || [];
+    const remembered = {};
+    for (const c of V.clusters) {
+      const hit = saved.find(s => Math.abs(s.ar - c.ar) <= 0.22 &&
+        hammingB64(s.bitmap, c.bitmap) <= 6);
+      if (hit) remembered[c.id] = hit.name;
+    }
+
+    const known = Object.assign({}, remembered, learn.names, names || {});
+    return {
+      rows: V.rows.map(row => ({
+        y0: row.y0, y1: row.y1,
+        cells: row.cells.filter(c => c.seq && c.seq.length).map(c => ({
+          col: c.col,
+          seq: c.seq.map(i => i.solidus ? { solidus: true, part: 'solidus' }
+                                        : { cluster: i.cluster, part: i.part })
+        }))
+      })),
+      clusters: V.clusters.map(c => Object.assign(
+        { id: c.id, count: c.members.length }, vt.clusterOutline(c))),
+      learned: learn.names,
+      evidence: learn.evidence,
+      conflicts: learn.conflicts,
+      remembered,
+      known,
+      characters: V.glyphCount
+    };
+  } catch (err) {
+    return { error: (err && err.message) || String(err) };
+  }
+});
+
+/* Remember the shapes the operator named, so the next sheet from the same
+   detailer needs none of it again. Only what they actually typed is kept -
+   the labels the sheet proved for itself are re-derived every time and do not
+   need storing. */
+ipcMain.handle('save-alphabet', async (e, { names }) => {
+  if (!lastVectorClusters || !names) return { saved: 0 };
+  const s = readSettings();
+  const alphabet = s.alphabet || [];
+  let saved = 0;
+  for (const [id, name] of Object.entries(names)) {
+    if (!name) continue;
+    const c = lastVectorClusters.find(c => String(c.id) === String(id));
+    if (!c) continue;
+    const b64 = Buffer.from(c.bitmap).toString('base64');
+    const at = alphabet.findIndex(x => Math.abs(x.ar - c.ar) <= 0.22 && hammingB64(x.bitmap, c.bitmap) <= 6);
+    if (at >= 0) alphabet[at] = { bitmap: b64, ar: c.ar, name };
+    else alphabet.push({ bitmap: b64, ar: c.ar, name });
+    saved++;
+  }
+  s.alphabet = alphabet;
+  writeSettings(s);
+  return { saved, total: alphabet.length };
+});
+
+ipcMain.handle('forget-alphabet', async () => {
+  const s = readSettings();
+  delete s.alphabet;
+  writeSettings(s);
+  return { cleared: true };
+});
+
 /* The free half of the pull: whatever the sheet carries as live text.
    No key, no network, no OCR. Columns that were exploded to line art come
    back empty rather than guessed. */

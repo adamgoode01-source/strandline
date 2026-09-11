@@ -512,6 +512,17 @@ hr.r{border:0;border-top:1px solid var(--rule);margin:14px 0}
 .dots button.bad{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
 .dots button.pulled{background:var(--warn-bg);border-color:var(--warn);color:var(--warn)}
 .rowfields input.pulled{background:var(--warn-bg);border-color:var(--warn)}
+.shapes{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.shape{display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 6px;
+  border:1px solid var(--line);border-radius:8px;background:var(--bg-2);min-width:62px}
+.shape svg{display:block}
+.shape .seen{font-size:10px;color:var(--ink-3)}
+.shape input{width:44px;text-align:center;font-size:15px;padding:4px;
+  border:1px solid var(--line);border-radius:6px;background:var(--bg-1);color:var(--ink-1)}
+.shape.named input{border-color:var(--ok);background:var(--ok-bg)}
+.shape.auto{opacity:.55}
+.shapeprev{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;
+  line-height:1.6;margin-top:10px;white-space:pre;overflow-x:auto}
 .dots button.now{outline:2px solid var(--accent);outline-offset:1px}
 .rowfields{display:grid;grid-template-columns:1.4fr 1fr 1fr auto;gap:10px;align-items:end;margin-top:12px}
 @media (max-width:900px){ .rowfields{grid-template-columns:1fr} }
@@ -727,6 +738,17 @@ table.entry td.out{font-family:var(--f-mono);font-size:11px;color:var(--ink-3);w
                 <span id="rowPullNote" style="font-size:11px;color:var(--ink-3);align-self:center"></span>
               </div>
               <div id="rowPullMsg"></div>
+              <div id="shapeCard" style="display:none;margin-top:12px;padding:12px;
+                   border:1px solid var(--line);border-radius:10px;background:var(--bg-2)">
+                <div id="shapeIntro" class="note"></div>
+                <div class="shapes" id="shapeGrid"></div>
+                <div class="shapeprev" id="shapePrev"></div>
+                <div class="btnrow" style="margin-top:12px">
+                  <button class="btn primary sm" id="shapeApply">Fill the rows</button>
+                  <button class="btn ghost sm" id="shapeClose">Not now</button>
+                  <span id="shapeNote" style="font-size:11px;color:var(--ink-3);align-self:center"></span>
+                </div>
+              </div>
               <div class="stripnav">
                 <span class="pos" id="stripPos"></span>
                 <button class="btn sm ghost" id="stripPrev">&larr; Back</button>
@@ -3276,6 +3298,239 @@ function stripSummary(){
   el.innerHTML = html;
 }
 
+/* ---------------------------------------------------------------------
+   Reading the columns a detailer exported as line-work.
+
+   The sheet holds these as vector strokes rather than characters, so there
+   is nothing to extract - but identical characters are identical geometry,
+   which means the shapes can be grouped exactly and named once. The counts
+   in the bundle column name most of the digits on their own; whatever is
+   left is shown here for the operator to name by eye.
+
+   Nothing in here decides what a shape means. An unnamed shape leaves a
+   gap in the cell and the cell is not filled.
+   --------------------------------------------------------------------- */
+const VT = { rows: [], clusters: [], names: {}, learned: {}, typed: {} };
+
+function vtRenderCell(seq){
+  let out='';
+  for(const it of seq){
+    if(it.solidus){ out+='/'; continue; }
+    const n = VT.names[it.cluster];
+    out += (n==null||n==='') ? '\u00b7' : n;
+  }
+  return out;
+}
+/* A quantity only counts when every character in it has a name: a half-read
+   count would fail the cross-check against the bundle range for the wrong
+   reason, and look like a drawing error rather than a reading one. */
+function vtAsQty(seq){
+  const t = vtRenderCell(seq);
+  if(!t || t.indexOf('\u00b7') >= 0) return null;
+  const m = /^(\d{1,3})[Xx](\d{1,4})([A-Za-z]{0,2})$/.exec(t.replace(/\s+/g,''));
+  return m ? m[1]+' X '+m[2]+m[3].toUpperCase() : null;
+}
+/* The delta, the equals sign and the inch mark are printed but carry no
+   value. What is left has to sit in the three places the layout already
+   identified, so 2-1/2 is never confused with 21/2. */
+function vtAsElong(seq){
+  if(seq.some(i=>!i.solidus && (VT.names[i.cluster]==null || VT.names[i.cluster]===''))) return null;
+  const part = p => seq.filter(i=>i.part===p && !i.solidus).map(i=>VT.names[i.cluster]).join('');
+  const main = part('main').replace(/[^0-9]/g,'');
+  const num  = part('num').replace(/[^0-9]/g,'');
+  const den  = part('den').replace(/[^0-9]/g,'');
+  const hasFraction = seq.some(i=>i.solidus);
+
+  /* A cell with a solidus in it has a fraction, and if both halves did not
+     resolve then the cell was not understood. Returning the whole number on
+     its own would read "4" where the sheet says "4 1/4" - a plausible
+     elongation, wrong by a quarter inch, and nothing about it looks odd.
+     Blank is recoverable; this would not be. */
+  if(hasFraction && !(num && den)) return null;
+
+  const out = (num && den) ? ((main ? main + ' ' : '') + num + '/' + den) : main;
+  /* Whatever comes out has to look like inches. */
+  return /^\d{1,3}( \d{1,2}\/\d{1,2})?$/.test(out) ? out : null;
+}
+
+function vtShapeSvg(c){
+  const H = 30, W = Math.max(12, Math.round(H * (c.aspect||0.6)));
+  const paths = c.lines.map(pts =>
+    '<polyline points="' + pts.map(p=>(p[0]/100*(W-3)+1.5).toFixed(1)+','+(p[1]/100*(H-3)+1.5).toFixed(1)).join(' ') +
+    '" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>').join('');
+  return '<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" aria-hidden="true">'+paths+'</svg>';
+}
+
+function vtRenderShapes(){
+  const host = $('#shapeGrid');
+  if(!host) return;
+  const list = VT.clusters.slice().sort((a,b)=>b.count-a.count);
+  host.innerHTML = list.map(c=>{
+    const auto = VT.learned[c.id] != null && VT.typed[c.id] == null;
+    const val = VT.names[c.id] == null ? '' : VT.names[c.id];
+    return '<div class="shape'+(val?' named':'')+(auto?' auto':'')+'" title="'+
+      (auto ? 'Named from the bundle counts' : 'Seen '+c.count+' times')+'">'+
+      vtShapeSvg(c)+
+      '<input data-shape="'+c.id+'" maxlength="2" value="'+esc(val)+'" '+
+      'autocapitalize="characters" autocorrect="off" spellcheck="false">'+
+      '<span class="seen">'+c.count+'</span></div>';
+  }).join('');
+  $$('#shapeGrid input').forEach(el=>{
+    el.addEventListener('input', ()=>{
+      const id = el.dataset.shape;
+      const v = el.value.trim();
+      if(v){ VT.names[id] = v; VT.typed[id] = v; }
+      else { delete VT.typed[id]; if(VT.learned[id]!=null) VT.names[id]=VT.learned[id]; else delete VT.names[id]; }
+      el.parentNode.classList.toggle('named', !!VT.names[id]);
+      vtRenderPreview();
+    });
+    el.addEventListener('keydown', e=>{
+      if(e.key==='Enter'){
+        e.preventDefault();
+        const all = $$('#shapeGrid input'); const i = all.indexOf(el);
+        if(i>=0 && i+1<all.length) all[i+1].focus();
+      }
+    });
+  });
+}
+
+/* The preview is the check. The operator is naming shapes, not rows, so the
+   only way to see whether a name is right is to watch the rows resolve. */
+function vtRenderPreview(){
+  const host = $('#shapePrev');
+  if(!host) return;
+  const lines = VT.rows.slice(0, 8).map((row, i)=>{
+    const q = row.cells.find(c=>c.col===1), e = row.cells.find(c=>c.col===2);
+    const qs = q ? (vtAsQty(q.seq) || vtRenderCell(q.seq)) : '';
+    const es = e ? (vtAsElong(e.seq) || vtRenderCell(e.seq)) : '';
+    return String(i+1).padStart(2)+'   '+qs.padEnd(12)+es;
+  });
+  const done = vtReady();
+  host.textContent = lines.join('\n') + (VT.rows.length>8 ? '\n     \u2026' : '');
+  const note = $('#shapeNote');
+  if(note) note.textContent = done.qty + ' quantities and ' + done.elong + ' elongations resolve';
+}
+
+function vtReady(){
+  let qty=0, elong=0;
+  VT.rows.forEach(row=>{
+    const q = row.cells.find(c=>c.col===1), e = row.cells.find(c=>c.col===2);
+    if(q && vtAsQty(q.seq)) qty++;
+    if(e && vtAsElong(e.seq)) elong++;
+  });
+  return { qty, elong };
+}
+
+/* Ask for the line-work reading and put the naming panel up. Runs only when
+   the text layer left something out, because a sheet whose columns are all
+   live text has nothing here to do. */
+async function vtStart(){
+  const pg = AS.pages.find(p=>p.page === AS.page);
+  const c = pg && pg.candidates[AS.cand];
+  if(!c || !window.strandline || !window.strandline.readTableVector) return null;
+  const bands = AS.strips.filter(st=>st && st.y0 != null).map(st=>({ y0: st.y0, y1: st.y1 }));
+  const res = await window.strandline.readTableVector({
+    pdfPath: AS.pdf, page: AS.page, box: c.box, rowBands: bands
+  });
+  if(!res || res.error || !res.rows || !res.rows.length) return res || null;
+
+  VT.rows = res.rows;
+  VT.clusters = res.clusters || [];
+  VT.learned = res.learned || {};
+  VT.typed = {};
+  VT.names = Object.assign({}, res.known || {});
+  Object.keys(res.remembered || {}).forEach(id => { VT.typed[id] = res.remembered[id]; });
+  VT.conflicts = res.conflicts || [];
+  return res;
+}
+
+function vtShow(res){
+  const card = $('#shapeCard');
+  if(!card) return;
+  const auto = Object.keys(VT.learned).length;
+  const remembered = Object.keys(res.remembered || {}).length;
+  const left = VT.clusters.filter(c=>VT.names[c.id]==null).length;
+  $('#shapeIntro').innerHTML =
+    '<strong>These columns were drawn, not typed.</strong> The sheet holds them as '+
+    'line-work, so there are no characters to read \u2014 but every instance of a '+
+    'character is the same shape, so naming a shape once settles it everywhere. '+
+    res.characters + ' characters here, ' + VT.clusters.length + ' different shapes.' +
+    (auto ? '<div style="margin-top:6px">' + auto + ' of them the sheet named for itself: the '+
+      'bundle column says how many cables each row covers, and the quantity begins with '+
+      'those digits. Those are shown faded.</div>' : '') +
+    (remembered ? '<div style="margin-top:6px">' + remembered + ' more came from shapes you '+
+      'named on an earlier sheet.</div>' : '') +
+    (VT.conflicts && VT.conflicts.length ? '<div style="margin-top:6px"><strong>'+
+      VT.conflicts.length + ' shape(s) two rows disagreed about</strong> are left unnamed '+
+      'rather than guessed.</div>' : '') +
+    (left ? '<div style="margin-top:6px">Type the character under each remaining shape. '+
+      'Enter moves to the next. Watch the rows below resolve as you go \u2014 that is the check.</div>'
+          : '<div style="margin-top:6px">Nothing left to name. Check the rows below and fill them in.</div>');
+  card.style.display = '';
+  vtRenderShapes();
+  vtRenderPreview();
+  card.scrollIntoView({ block:'nearest' });
+  const first = $$('#shapeGrid input').find(el=>!el.value);
+  if(first) first.focus();
+}
+
+/* Put the resolved cells on their rows. Placement is by where the row sits on
+   the sheet, the same as the text pull - never by order. A cell that did not
+   fully resolve is skipped, so a row can come back with a quantity and no
+   elongation rather than a wrong one. */
+async function vtApply(){
+  let touched = 0, qty = 0, elong = 0, unresolved = 0;
+  VT.rows.forEach(row=>{
+    const i = pullRowFor((row.y0 + row.y1) / 2);
+    if(i < 0) return;
+    const r = AS.rows[i];
+    if(!r) return;
+    /* Leave heading bands alone. The text pull has already turned any band
+       that carries printed data back into a data row, so anything still
+       marked as a heading here is the table's own title or column captions -
+       and reading those as a quantity produces nonsense that then has to be
+       noticed and undone. */
+    if(r.skip) return;
+    const q = row.cells.find(c=>c.col===1), e = row.cells.find(c=>c.col===2);
+    const qv = q ? vtAsQty(q.seq) : null;
+    const ev = e ? vtAsElong(e.seq) : null;
+    if((q && !qv) || (e && !ev)) unresolved++;
+    let changed = false;
+    if(qv && !String(r.qtyFt||'').trim()){ r.qtyFt = qv; qty++; changed = true; }
+    if(ev && !String(r.elong||'').trim()){ r.elong = ev; elong++; changed = true; }
+    if(changed){
+      r.pulled = true; r.seen = false; r.edited = false; r.pullSource = 'vector';
+      touched++;
+    }
+  });
+  if(touched) pullRefresh();
+
+  /* Keep what the operator typed, not what was derived - the derived labels
+     come back free on every sheet, and storing them would bake this table's
+     cluster numbering into the alphabet. */
+  let savedCount = 0;
+  if(Object.keys(VT.typed).length && window.strandline.saveAlphabet){
+    try{
+      const r = await window.strandline.saveAlphabet({ names: VT.typed });
+      savedCount = (r && r.saved) || 0;
+    }catch(err){ savedCount = 0; }
+  }
+
+  $('#shapeCard').style.display = 'none';
+  pullMsg('<strong>Filled ' + qty + ' quantity and ' + elong + ' elongation cells from the '+
+    'sheet\u2019s line-work.</strong> Every one is marked amber until you have been on its row. '+
+    'The characters come from shapes you confirmed, not from a reading of the picture, but '+
+    'step through and check each against the strip \u2014 an elongation wrong by a sixteenth '+
+    'changes whether a tendon passes.' +
+    (unresolved ? '<div style="margin-top:8px">' + unresolved + ' cell' + (unresolved===1?'':'s') +
+      ' did not resolve fully and ' + (unresolved===1?'was':'were') + ' left empty. Rows carrying '+
+      'a revision cloud often land here, because the cloud\u2019s marks sit in the cell.</div>' : '') +
+    (savedCount ? '<div style="margin-top:8px">' + savedCount + ' shape' + (savedCount===1?'':'s') +
+      ' remembered. The next sheet from this detailer will not ask again.</div>' : ''),
+    unresolved ? 'stop' : '');
+  if(touched) toast(touched + ' rows filled \u2014 check each one');
+}
+
 /* Messages from the pull go directly under the button. They used to go to
    officeLog, in a card further down the screen, where they were missed
    entirely and the button looked dead. */
@@ -3542,11 +3797,25 @@ async function stripPull(){
       'back into ' + (f.ontoHeading.length===1?'a data row':'data rows') + '.</div>';
   }
 
-  if(missing){
+  /* What the text layer could not supply may still be on the sheet as
+     line-work. That reading costs nothing and needs no key, so it is tried
+     before the API is ever mentioned. */
+  let vec = null;
+  if(missing && isDesktop()){
+    $('#rowPullNote').textContent = 'Looking at the line-work\u2026';
+    try{ vec = await vtStart(); }catch(err){ vec = null; }
+    $('#rowPullNote').textContent = '';
+  }
+
+  if(vec && vec.rows && vec.rows.length){
+    html += '<div style="margin-top:8px">The missing columns are on the sheet as line-work. '+
+      'They can be read here with no key \u2014 see below.</div>';
+  } else if(missing){
     html += '<div class="btnrow" style="margin-top:10px">'+
       '<button class="btn sm" id="pullWithApi">Read the rest with the API</button></div>';
   }
   pullMsg(html, (!f.touched || warned) ? 'stop' : '');
+  if(vec && vec.rows && vec.rows.length) vtShow(vec);
   pullWire();
   if(f.touched) toast(f.touched + ' rows filled from the sheet \u2014 check each one');
 }
@@ -4765,6 +5034,10 @@ function init(){
       });
     });
     $('#rowPull').addEventListener('click', stripPull);
+    $('#shapeApply') && $('#shapeApply').addEventListener('click', vtApply);
+    $('#shapeClose') && $('#shapeClose').addEventListener('click', ()=>{
+      $('#shapeCard').style.display = 'none';
+    });
     $('#stripNext').addEventListener('click', advance);
     $('#stripPrev').addEventListener('click', ()=>stripGo(AS.cursor - 1));
     $('#stripUnskip') && $('#stripUnskip').addEventListener('click', ()=>{

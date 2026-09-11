@@ -27,6 +27,9 @@ contextBridge.exposeInMainWorld('strandline', {
   segmentTable: opts => ipcRenderer.invoke('segment-table', opts),
   readTable: opts => ipcRenderer.invoke('read-table', opts),
   readTableText: opts => ipcRenderer.invoke('read-table-text', opts),
+  readTableVector: opts => ipcRenderer.invoke('read-table-vector', opts),
+  saveAlphabet: opts => ipcRenderer.invoke('save-alphabet', opts),
+  forgetAlphabet: () => ipcRenderer.invoke('forget-alphabet'),
   onScanProgress: cb => {
     const h = (e, msg) => cb(msg);
     ipcRenderer.on('scan-progress', h);

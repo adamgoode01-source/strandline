@@ -15,6 +15,12 @@ if (-not (Test-Path $src)) { throw "index.html not found in $here" }
 # Read as UTF-8 explicitly. Windows PowerShell 5.1's Get-Content assumes the system
 # ANSI codepage for BOM-less files, which turns every em-dash and non-ASCII character
 # into mojibake on the way through.
+# Cheap checks that have each caught a real shipped bug - notably $$ collapsing
+# to $ when a patch is applied with String.replace, which throws only when the
+# line eventually runs. Refuse to build rather than ship it.
+& node (Join-Path $here 'tools/check-page.mjs')
+if ($LASTEXITCODE -ne 0) { throw 'check-page failed - index.html not built' }
+
 $raw = [System.IO.File]::ReadAllText($src, (New-Object System.Text.UTF8Encoding($false)))
 
 # Split at the end of the stylesheet: everything before it belongs in <head>,

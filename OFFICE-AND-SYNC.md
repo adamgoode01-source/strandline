@@ -58,9 +58,27 @@ typing gone, for free, with no possibility of a wrong value. Other sets carry
 all three columns; some carry none. The message under the button says which
 columns it actually got and which you still have to type.
 
-**The reader** is the paid accelerator, offered only for the columns the free
-pass could not recover: it reads them with the Claude API, and needs your own
-key. Values it supplies are marked amber until you have been on the row.
+**The shape reader** handles the columns that were drawn instead of typed, and
+it also needs no key. Where the text layer finds nothing, the sheet usually
+still holds the characters as CAD line-work — exact geometry, not a scan — so
+every instance of a character is the *same shape*. Strandline groups the
+shapes, works out as many as the sheet proves for itself, and shows you the
+rest to name once.
+
+The free labels come from arithmetic you can check: the bundle column says
+`300 THRU 308`, which is nine cables, so the digit before the `X` on that row
+is a nine. That settled 8 shapes on the Prado schedule with no input, each
+confirmed by several rows, and a shape two rows disagree about is left unnamed
+rather than guessed.
+
+Naming is per detailer, not per sheet — the shapes are remembered, so the
+second schedule from the same office asks for nothing. Measured end to end on
+Prado POUR 1: **18 of 18 quantities correct, 15 of 18 elongations correct, 3
+left blank, none wrong.**
+
+**The API reader** is the paid accelerator, offered only when neither free
+pass recovered a column: it reads with the Claude API and needs your own key.
+Values it supplies are marked amber until you have been on the row.
 
 ## Why the reader exists
 
@@ -272,6 +290,7 @@ cd desktop
 node test-reader.mjs      # 49  fractions, bundle expansion, guards
 node test-import.mjs      # 19  the app importing a real reader file
 node test-table-text.mjs  # 30  the free text-layer read, and what it refuses
+node test-vector-text.mjs # shape grouping, and the labels the sheet proves
 cd ../server
 node test-server.mjs      # 38  auth, roles, merge, conflicts, isolation
 ```
