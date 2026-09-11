@@ -141,6 +141,23 @@ async function runDiag(win, pdfPath, out) {
     })()`, true));
     flush();
 
+    /* The pull button with no API key saved: it must explain rather than
+       silently fall back to local OCR, which was measured on this table at 3
+       of 18 elongations correct. */
+    say('pull button without a key', await run(`(async () => {
+      const before = AS.rows.map(r => r.bundle).join("|");
+      document.getElementById("rowPull").click();
+      await new Promise(r => setTimeout(r, 900));
+      const after = AS.rows.map(r => r.bundle).join("|");
+      return {
+        rowsUnchanged: before === after,
+        buttonReEnabled: !document.getElementById("rowPull").disabled,
+        message: (document.getElementById("officeLog").innerText || "").slice(0, 170),
+        keyCardOpened: document.getElementById("officeKeyCard").style.display !== "none"
+      };
+    })()`, true));
+    flush();
+
     say('create the form', await run(`(async () => {
       document.getElementById('rowCreate').click();
       await new Promise(r => setTimeout(r, 350));

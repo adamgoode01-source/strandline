@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('strandline', {
   scanPlans: opts => ipcRenderer.invoke('scan-plans', opts),
   cropRegion: opts => ipcRenderer.invoke('crop-region', opts),
   segmentTable: opts => ipcRenderer.invoke('segment-table', opts),
+  readTable: opts => ipcRenderer.invoke('read-table', opts),
   onScanProgress: cb => {
     const h = (e, msg) => cb(msg);
     ipcRenderer.on('scan-progress', h);

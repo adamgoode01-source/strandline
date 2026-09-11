@@ -216,3 +216,25 @@ export async function renderOnly(pdfPath, pages, onProgress) {
   }
   return out;
 }
+
+/* Reads one already-cropped table image. Used by the desktop app's pull
+   button, where the operator has already chosen the region, so there is no
+   locate pass to pay for - one call, one table. */
+export async function readTableImage(jpegBuffer, opts) {
+  if (!opts || !opts.apiKey) throw new Error('no API key supplied');
+  const model = opts.model || DEFAULT_READ_MODEL;
+  const r = await callClaude(opts.apiKey, model,
+    [toDataPart(jpegBuffer), { type: 'text', text: READ_PROMPT }], 8192);
+  const parsed = extractJson(r.text);
+  if (!parsed || !Array.isArray(parsed.rows)) {
+    return { error: 'the reply could not be read as a table' };
+  }
+  return {
+    title: parsed.title || null,
+    pour: parsed.pour || null,
+    headers: parsed.headers || [],
+    rows: parsed.rows,
+    unreadable: parsed.unreadable || [],
+    usage: r.usage || {}
+  };
+}

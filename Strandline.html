@@ -510,6 +510,8 @@ hr.r{border:0;border-top:1px solid var(--rule);margin:14px 0}
   font-family:var(--f-mono);font-size:9px;color:var(--ink-3);cursor:pointer;line-height:1}
 .dots button.done{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
 .dots button.bad{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.dots button.pulled{background:var(--warn-bg);border-color:var(--warn);color:var(--warn)}
+.rowfields input.pulled{background:var(--warn-bg);border-color:var(--warn)}
 .dots button.now{outline:2px solid var(--accent);outline-offset:1px}
 .rowfields{display:grid;grid-template-columns:1.4fr 1fr 1fr auto;gap:10px;align-items:end;margin-top:12px}
 @media (max-width:900px){ .rowfields{grid-template-columns:1fr} }
@@ -719,6 +721,10 @@ table.entry td.out{font-family:var(--f-mono);font-size:11px;color:var(--ink-3);w
                 <label class="f"><span>Elongation</span>
                   <input id="rowElong" spellcheck="false"></label>
                 <div class="tally" id="rowTally"></div>
+              </div>
+              <div class="btnrow" style="margin-top:12px">
+                <button class="btn ghost" id="rowPull">Pull the data from this table</button>
+                <span id="rowPullNote" style="font-size:11px;color:var(--ink-3);align-self:center"></span>
               </div>
               <div class="stripnav">
                 <span class="pos" id="stripPos"></span>
@@ -3176,7 +3182,10 @@ function stripRenderDots(){
     const b = filled ? parseBundleSafe(r.bundle) : null;
     const q = filled ? parseQtyFtSafe(r.qtyFt) : null;
     const bad = filled && (!b || !q || (q.qty != null && b && q.qty !== b.count));
-    const cls = r.skip ? '' : (bad ? 'bad' : (filled ? 'done' : ''));
+    /* Amber means read by machine and not yet looked at. It only turns green
+       once the operator has actually been on that row, so "filled in" and
+       "checked" never look the same. */
+    const cls = r.skip ? '' : (bad ? 'bad' : (r.pulled && !r.seen ? 'pulled' : (filled ? 'done' : '')));
     return '<button data-strip="'+i+'" class="'+cls+(i===AS.cursor?' now':'')+'" '+
       'title="row '+(i+1)+'">'+(r.skip?'\u2013':(i+1))+'</button>';
   }).join('');
@@ -3192,7 +3201,13 @@ function stripShow(){
   $('#rowQty').value = r.qtyFt || '';
   $('#rowElong').value = r.elong || '';
   $('#stripPos').textContent = 'Row ' + (i+1) + ' of ' + AS.strips.length +
-    (r.skip ? ' — not data' : '');
+    (r.skip ? ' — not data' : (r.pulled && !r.seen ? ' — machine read, check it' : ''));
+  // being on a row counts as having looked at it
+  if(r.pulled && !r.seen){ r.seen = true; setTimeout(stripRenderDots, 0); }
+  ['rowBundle','rowQty','rowElong'].forEach(id=>{
+    const el = $('#'+id);
+    if(el) el.classList.toggle('pulled', !!r.pulled && !r.edited);
+  });
   $('#stripPrev').disabled = i === 0;
   $('#stripNext').disabled = i >= AS.strips.length - 1;
   stripRenderTally();
@@ -3222,9 +3237,12 @@ function stripRenderTally(){
 
 function stripCapture(){
   const r = AS.rows[AS.cursor] || (AS.rows[AS.cursor] = {});
+  const before = (r.bundle||'')+'|'+(r.qtyFt||'')+'|'+(r.elong||'');
   r.bundle = $('#rowBundle').value;
   r.qtyFt = $('#rowQty').value;
   r.elong = $('#rowElong').value;
+  const after = r.bundle+'|'+r.qtyFt+'|'+r.elong;
+  if(after !== before) r.edited = true;
   if(r.bundle || r.qtyFt || r.elong) r.skip = false;
 }
 
@@ -3257,6 +3275,84 @@ function stripSummary(){
   el.innerHTML = html;
 }
 
+/* Pre-fill every row from one read of the chosen table.
+ *
+ * This calls the API rather than reading locally. Local OCR was measured on
+ * this exact table: 3 of 18 elongations exact and 11 confidently wrong, with
+ * the digit 5 read as 3 often enough that lengths came back plausible and
+ * incorrect - "17 X 57A" as "17 X 37A". A wrong length passes the quantity
+ * cross-check silently, so it would reach the record unnoticed. Pre-filling
+ * from that would make errors harder to catch, not easier.
+ *
+ * Pulled values are marked amber and stay amber until the operator has been
+ * on the row, so "filled in" never looks the same as "checked". */
+async function stripPull(){
+  const pg = AS.pages.find(p=>p.page === AS.page);
+  const c = pg && pg.candidates[AS.cand];
+  if(!c){ toast('Pick a table first'); return; }
+  const btn = $('#rowPull');
+  btn.disabled = true;
+  $('#rowPullNote').textContent = 'Reading the table\u2026';
+  let res;
+  try{
+    res = await window.strandline.readTable({ pdfPath: AS.pdf, page: AS.page, box: c.box });
+  }finally{ btn.disabled = false; }
+
+  if(res && res.error === 'no-key'){
+    $('#rowPullNote').textContent = '';
+    officeLog('<strong>No API key saved.</strong> Pulling the data reads the table with the '+
+      'Claude API, which needs your own key. Local reading was measured on this table at 3 of 18 '+
+      'elongations correct, so it is not offered as a substitute. Press <strong>API key</strong> '+
+      'on this project to add one, or keep typing the rows.', 'stop');
+    $('#officeKeyCard').style.display = '';
+    return;
+  }
+  if(!res || res.error){
+    $('#rowPullNote').textContent = '';
+    officeLog('<strong>Could not read the table.</strong> '+esc((res && res.error) || 'no reply'), 'stop');
+    return;
+  }
+
+  const rows = res.rows || [];
+  if(!rows.length){ $('#rowPullNote').textContent = 'Nothing readable in that table.'; return; }
+
+  /* The strips include heading rows; the read returns data rows only. Fill
+     from the first row not marked as a heading so the two line up. */
+  let target = AS.rows.findIndex(r => !r.skip);
+  if(target < 0) target = 0;
+  let filled = 0;
+  for(const row of rows){
+    while(target < AS.rows.length && AS.rows[target].skip) target++;
+    if(target >= AS.rows.length) break;
+    const r = AS.rows[target];
+    r.bundle = row.bundle == null ? '' : String(row.bundle);
+    r.qtyFt  = row.qtyFt  == null ? '' : String(row.qtyFt);
+    r.elong  = row.elongation == null ? '' : String(row.elongation).replace(/^\s*[D\u0394\u2206]?\s*=\s*/, '').trim();
+    r.pulled = true; r.seen = false; r.edited = false;
+    filled++; target++;
+  }
+
+  const extra = rows.length - filled;
+  $('#rowPullNote').textContent = filled + ' row' + (filled===1?'':'s') + ' filled in' +
+    (extra > 0 ? ', ' + extra + ' more than there are strips' : '');
+  AS.cursor = AS.rows.findIndex(r => !r.skip);
+  if(AS.cursor < 0) AS.cursor = 0;
+  stripShow();
+  stripSummary();
+
+  const unread = (res.unreadable || []);
+  officeLog('<strong>Read ' + filled + ' rows.</strong> Every one is marked amber until you have '+
+    'been on it. Step through with Enter and check each against the strip above the fields \u2014 '+
+    'an elongation wrong by a sixteenth changes whether a tendon passes.' +
+    (unread.length ? '<div style="margin-top:8px"><strong>Not read with confidence:</strong><ul '+
+      'style="margin:6px 0 0 18px;padding:0">' + unread.map(u=>'<li>'+esc(u)+'</li>').join('') +
+      '</ul></div>' : '') +
+    (extra > 0 ? '<div style="margin-top:8px">The table had ' + extra + ' more rows than the '+
+      'segmentation found. Check the end of the table.</div>' : ''),
+    unread.length || extra > 0 ? 'stop' : '');
+  toast(filled + ' rows filled \u2014 check each one');
+}
+
 /* Segment the chosen table into row strips and start at the first one. */
 async function stripStart(){
   const pg = AS.pages.find(p=>p.page === AS.page);
@@ -3271,7 +3367,7 @@ async function stripStart(){
   // Bands with no column separators are merged title cells. Pre-marked as not
   // data so the operator is not asked to transcribe the table's own heading,
   // and reversible from the row itself if the guess is wrong.
-  AS.rows = AS.strips.map(st => ({ bundle:'', qtyFt:'', elong:'', skip: !!st.likelyHeader }));
+  AS.rows = AS.strips.map(st => ({ bundle:'', qtyFt:'', elong:'', skip: !!st.likelyHeader, pulled:false, seen:false, edited:false }));
   const preSkipped = AS.strips.filter(st => st.likelyHeader).length;
   AS.cursor = 0;
   $('#overviewImg').src = r.overview;
@@ -4407,6 +4503,7 @@ function init(){
         }
       });
     });
+    $('#rowPull').addEventListener('click', stripPull);
     $('#stripNext').addEventListener('click', advance);
     $('#stripPrev').addEventListener('click', ()=>stripGo(AS.cursor - 1));
     $('#stripUnskip') && $('#stripUnskip').addEventListener('click', ()=>{

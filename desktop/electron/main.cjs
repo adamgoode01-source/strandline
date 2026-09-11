@@ -414,3 +414,34 @@ ipcMain.handle('segment-table', async (e, { pdfPath, page, box }) => {
     return { error: (err && err.message) || String(err) };
   }
 });
+
+
+/* Reads one chosen table and hands back its rows, for pre-filling the
+   row-by-row grid. Only transcription: the expansion into tendons still
+   happens in tested code, and the operator still confirms every row against
+   the strip beside it.
+
+   This uses the API rather than local OCR because local OCR was measured on
+   this same table and is not fit for it - 3 of 18 elongations exact, 11
+   confidently wrong, with 5 read as 3 so lengths come back plausible and
+   incorrect. A wrong length passes the quantity cross-check silently. */
+ipcMain.handle('read-table', async (e, { pdfPath, page, box }) => {
+  const key = loadApiKey();
+  if (!key) return { error: 'no-key' };
+  if (!pdfPath || !fs.existsSync(pdfPath)) return { error: 'That file could not be found.' };
+  try {
+    const r = await import(pathToFileURL(path.join(__dirname, '..', 'render.mjs')).href);
+    const core = await import(pathToFileURL(path.join(__dirname, '..', 'reader-core.mjs')).href);
+    const s = readSettings();
+    const doc = await r.openPdf(pdfPath);
+    const { png } = await r.renderPage(doc, page, 4.0);
+    const crop = await r.cropRegion(png, box);
+    const res = await core.readTableImage(crop, {
+      apiKey: key,
+      model: s.readModel || undefined
+    });
+    return res;
+  } catch (err) {
+    return { error: (err && err.message) || String(err) };
+  }
+});
