@@ -33,17 +33,41 @@ const PRADO_ROWS = [
 
 async function runDiag(win, pdfPath, out) {
   const log = [];
-  const say = (k, v) => log.push({ check: k, result: v });
-  const run = (src, awaitPromise) => win.webContents.executeJavaScript(src, !!awaitPromise);
   const flush = () => { try { fs.writeFileSync(out, JSON.stringify(log, null, 2)); } catch (e) {} };
 
+  const say = (k, v) => {
+    const at = log.findIndex(e => e.check === k);
+    if (at >= 0) log[at].result = v; else log.push({ check: k, result: v });
+    flush();
+  };
+
+  /* Each step is recorded as started before it runs, and given its own time
+     limit. A renderer that hangs or dies takes the whole process down with it,
+     and the first run of this file simply stopped writing after four checks -
+     with no way to tell which step never came back. Now the file always names
+     the step that was in flight, and one hung step does not cost the rest. */
+  const LIMIT = 120000;
+  const run = (src, userGesture) => {
+    let timer;
+    const capped = new Promise((_, rej) => {
+      timer = setTimeout(() => rej(new Error('the page did not reply within ' + (LIMIT / 1000) + 's')), LIMIT);
+    });
+    return Promise.race([win.webContents.executeJavaScript(src, !!userGesture), capped])
+      .finally(() => clearTimeout(timer));
+  };
+  const step = async (name, src) => {
+    say(name, { started: true, finished: false });
+    try { say(name, await run(src, true)); }
+    catch (e) { say(name, { failed: String((e && e.message) || e) }); }
+  };
+
   try {
-    say('window.prompt', await run(`(() => {
+    await step('window.prompt', `(() => {
       try { window.prompt('t'); return { available: true }; }
       catch (e) { return { available: false, threw: String((e && e.message) || e) }; }
-    })()`));
+    })()`);
 
-    say('new project', await run(`(async () => {
+    await step('new project', `(async () => {
       DB = { v:2, projects:[], activeProject:null, active:null, view:'home' };
       setView('home');
       document.getElementById('newProject').click();
@@ -53,12 +77,11 @@ async function runDiag(win, pdfPath, out) {
       await new Promise(r => setTimeout(r, 250));
       return { projects: DB.projects.length, onScreen: document.querySelector('.screen.on').id,
                assistCardVisible: document.getElementById('assistCard').style.display !== 'none' };
-    })()`, true));
-    flush();
+    })()`);
 
-    if (!(pdfPath && fs.existsSync(pdfPath))) { say('assisted entry', { skipped: 'no pdf' }); flush(); return log; }
+    if (!(pdfPath && fs.existsSync(pdfPath))) { say('assisted entry', { skipped: 'no pdf' }); return log; }
 
-    say('scan for ruled tables', await run(`(async () => {
+    await step('scan for ruled tables', `(async () => {
       const t0 = Date.now();
       const res = await window.strandline.scanPlans({ pdfPath: ${JSON.stringify(pdfPath)} });
       if (res.error) return { error: res.error };
@@ -66,11 +89,10 @@ async function runDiag(win, pdfPath, out) {
       AS.pages = res.pages;
       return { ms: Date.now() - t0, sheets: res.pages.length,
                candidates: res.pages.reduce((a, p) => a + p.candidates.length, 0) };
-    })()`, true));
-    flush();
+    })()`);
 
     // Pick the schedule and let asChoose take us into row-by-row entry.
-    say('pick the schedule, then cut it into rows', await run(`(async () => {
+    await step('pick the schedule, then cut it into rows', `(async () => {
       AS.page = 5;
       const pg = AS.pages.find(p => p.page === 5);
       if (!pg || !pg.candidates.length) return { error: 'no candidates on sheet 5' };
@@ -98,13 +120,62 @@ async function runDiag(win, pdfPath, out) {
         startsAtRow: AS.cursor + 1,
         dots: document.querySelectorAll('#stripDots button').length
       };
-    })()`, true));
-    flush();
+    })()`);
+
+    /* The pull button with no API key saved: it must explain rather than
+       silently fall back to local OCR, which was measured on this table at 3
+       of 18 elongations correct. The message has to land where the button is -
+       it used to be written to a card further down the screen, which is why
+       the button looked dead. */
+    await step('pull button without a key', `(async () => {
+      const before = AS.rows.map(r => r.bundle).join("|");
+      document.getElementById("rowPull").click();
+      await new Promise(r => setTimeout(r, 900));
+      const after = AS.rows.map(r => r.bundle).join("|");
+      const msg = document.getElementById("rowPullMsg");
+      const btn = document.getElementById("rowPull");
+      return {
+        rowsUnchanged: before === after,
+        buttonReEnabled: !btn.disabled,
+        messageNextToButton: ((msg && msg.innerText) || "").slice(0, 150),
+        messageIsVisible: (() => {
+          if (!msg || !msg.innerText.trim()) return false;
+          const screen = document.querySelector(".screen.on");
+          return msg.getBoundingClientRect().height > 0 && screen && screen.contains(msg);
+        })(),
+        pixelsFromButton: (() => {
+          if (!msg || !btn) return null;
+          return Math.round(msg.getBoundingClientRect().top - btn.getBoundingClientRect().bottom);
+        })(),
+        addKeyButtonOffered: !!document.getElementById("pullAddKey"),
+        stillOnProjectScreen: document.querySelector(".screen.on").id === "s-project"
+      };
+    })()`);
+
+    /* The key card the button offers is on the home screen. Revealing it from
+       here without navigating was the other half of the bug, so press the
+       offer and check we actually arrive somewhere the operator can type. */
+    await step('the offered key card is reachable', `(async () => {
+      const add = document.getElementById("pullAddKey");
+      if (!add) return { skipped: "no offer button" };
+      add.click();
+      await new Promise(r => setTimeout(r, 400));
+      const card = document.getElementById("officeKeyCard");
+      const input = document.getElementById("officeKeyInput");
+      const screen = document.querySelector(".screen.on");
+      return {
+        onScreen: screen.id,
+        cardOnThatScreen: !!(card && screen.contains(card)),
+        cardShown: !!(card && card.style.display !== 'none' && card.getBoundingClientRect().height > 0),
+        inputFocused: document.activeElement === input
+      };
+    })()`);
 
     /* Type the schedule the way a person would: into the three fields, pressing
        Enter to advance. This is the interaction that has broken twice before,
        so it is driven through the real controls and the real key handler. */
-    say('type all 18 rows, advancing with Enter', await run(`(async () => {
+    await step('type all 18 rows, advancing with Enter', `(async () => {
+      setView('project');
       const rows = ${JSON.stringify(PRADO_ROWS)};
       const type = (id, v) => {
         const el = document.getElementById(id);
@@ -138,27 +209,9 @@ async function runDiag(win, pdfPath, out) {
         dotsBad: document.querySelectorAll('#stripDots button.bad').length,
         summary: (document.getElementById('rowSummary').innerText || '').slice(0, 150)
       };
-    })()`, true));
-    flush();
+    })()`);
 
-    /* The pull button with no API key saved: it must explain rather than
-       silently fall back to local OCR, which was measured on this table at 3
-       of 18 elongations correct. */
-    say('pull button without a key', await run(`(async () => {
-      const before = AS.rows.map(r => r.bundle).join("|");
-      document.getElementById("rowPull").click();
-      await new Promise(r => setTimeout(r, 900));
-      const after = AS.rows.map(r => r.bundle).join("|");
-      return {
-        rowsUnchanged: before === after,
-        buttonReEnabled: !document.getElementById("rowPull").disabled,
-        message: (document.getElementById("officeLog").innerText || "").slice(0, 170),
-        keyCardOpened: document.getElementById("officeKeyCard").style.display !== "none"
-      };
-    })()`, true));
-    flush();
-
-    say('create the form', await run(`(async () => {
+    await step('create the form', `(async () => {
       document.getElementById('rowCreate').click();
       await new Promise(r => setTimeout(r, 350));
       const p = proj();
@@ -173,10 +226,9 @@ async function runDiag(win, pdfPath, out) {
         tolerance: rec.tolInd,
         pdfBuilds: (() => { try { return buildPdf(rec, false).length > 0; } catch (e) { return String(e.message); } })()
       };
-    })()`, true));
-    flush();
+    })()`);
 
-    say('a wrong quantity is flagged on its own row', await run(`(() => {
+    await step('a wrong quantity is flagged on its own row', `(() => {
       const keep = JSON.parse(JSON.stringify(AS.rows));
       AS.rows = AS.rows.map(()=>({ bundle:'', qtyFt:'', elong:'' }));
       AS.rows[0] = { bundle:'300 THRU 308', qtyFt:'10 X 34A', elong:'2 1/2' };
@@ -187,7 +239,7 @@ async function runDiag(win, pdfPath, out) {
       const ex = asExpand();
       AS.rows = keep;
       return { tally, badDots: bad, errors: ex.problems.filter(p=>p.level==='error').map(p=>p.msg) };
-    })()`));
+    })()`);
 
   } catch (e) {
     say('diagnostic threw', String((e && e.message) || e));

@@ -726,6 +726,7 @@ table.entry td.out{font-family:var(--f-mono);font-size:11px;color:var(--ink-3);w
                 <button class="btn ghost" id="rowPull">Pull the data from this table</button>
                 <span id="rowPullNote" style="font-size:11px;color:var(--ink-3);align-self:center"></span>
               </div>
+              <div id="rowPullMsg"></div>
               <div class="stripnav">
                 <span class="pos" id="stripPos"></span>
                 <button class="btn sm ghost" id="stripPrev">&larr; Back</button>
@@ -3275,6 +3276,14 @@ function stripSummary(){
   el.innerHTML = html;
 }
 
+/* Messages from the pull go directly under the button. They used to go to
+   officeLog, in a card further down the screen, where they were missed
+   entirely and the button looked dead. */
+function pullMsg(html, cls){
+  const el = $('#rowPullMsg');
+  if(el) el.innerHTML = html ? '<div class="note'+(cls?' '+cls:'')+'" style="margin-top:10px">'+html+'</div>' : '';
+}
+
 /* Pre-fill every row from one read of the chosen table.
  *
  * This calls the API rather than reading locally. Local OCR was measured on
@@ -3292,6 +3301,7 @@ async function stripPull(){
   if(!c){ toast('Pick a table first'); return; }
   const btn = $('#rowPull');
   btn.disabled = true;
+  pullMsg('');
   $('#rowPullNote').textContent = 'Reading the table\u2026';
   let res;
   try{
@@ -3300,16 +3310,25 @@ async function stripPull(){
 
   if(res && res.error === 'no-key'){
     $('#rowPullNote').textContent = '';
-    officeLog('<strong>No API key saved.</strong> Pulling the data reads the table with the '+
-      'Claude API, which needs your own key. Local reading was measured on this table at 3 of 18 '+
-      'elongations correct, so it is not offered as a substitute. Press <strong>API key</strong> '+
-      'on this project to add one, or keep typing the rows.', 'stop');
-    $('#officeKeyCard').style.display = '';
+    pullMsg('<strong>No API key saved.</strong> Pulling the data reads the table with the '+
+      'Claude API, which needs your own key. Reading it on this machine was measured against '+
+      'this very table and got 3 of 18 elongations right, with 11 confidently wrong, so it is '+
+      'not offered as a substitute. Keep typing the rows, or add a key.'+
+      '<div class="btnrow" style="margin-top:10px">'+
+      '<button class="btn sm primary" id="pullAddKey">Add an API key</button></div>', 'stop');
+    const add = $('#pullAddKey');
+    if(add) add.addEventListener('click', ()=>{
+      setView('home');
+      $('#officeKeyCard').style.display = '';
+      officeRefreshSettings();
+      $('#officeKeyCard').scrollIntoView({ block:'center' });
+      $('#officeKeyInput').focus();
+    });
     return;
   }
   if(!res || res.error){
     $('#rowPullNote').textContent = '';
-    officeLog('<strong>Could not read the table.</strong> '+esc((res && res.error) || 'no reply'), 'stop');
+    pullMsg('<strong>Could not read the table.</strong> '+esc((res && res.error) || 'no reply'), 'stop');
     return;
   }
 
@@ -3341,7 +3360,7 @@ async function stripPull(){
   stripSummary();
 
   const unread = (res.unreadable || []);
-  officeLog('<strong>Read ' + filled + ' rows.</strong> Every one is marked amber until you have '+
+  pullMsg('<strong>Read ' + filled + ' rows.</strong> Every one is marked amber until you have '+
     'been on it. Step through with Enter and check each against the strip above the fields \u2014 '+
     'an elongation wrong by a sixteenth changes whether a tendon passes.' +
     (unread.length ? '<div style="margin-top:8px"><strong>Not read with confidence:</strong><ul '+

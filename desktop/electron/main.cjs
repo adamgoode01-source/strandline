@@ -152,11 +152,26 @@ app.whenReady().then(() => {
   smokeTrace('window created', { page: PAGE, exists: fs.existsSync(PAGE) });
   if (process.env.STRANDLINE_DIAG) {
     const { runDiag } = require("./diag.cjs");
+    const outFile = process.env.STRANDLINE_DIAG_OUT || "diag.json";
+    /* A dead or shouting renderer is otherwise invisible here: executeJavaScript
+       just never resolves, and the run looks like it stopped for no reason. */
+    const note = (what, d) => {
+      try {
+        fs.appendFileSync(outFile + '.log',
+          new Date().toISOString() + '  ' + what + (d ? '  ' + JSON.stringify(d) : '') + '\n');
+      } catch (e) {}
+    };
+    win.webContents.on('render-process-gone', (e, d) => note('render-process-gone', d));
+    win.webContents.on('unresponsive', () => note('renderer unresponsive'));
+    win.webContents.on('console-message', (e, level, msg) => {
+      if (level >= 2) note('page error', { msg: String(msg).slice(0, 300) });
+    });
     win.webContents.once("did-finish-load", () => setTimeout(async () => {
-      await runDiag(win, process.env.STRANDLINE_DIAG, process.env.STRANDLINE_DIAG_OUT || "diag.json");
+      await runDiag(win, process.env.STRANDLINE_DIAG, outFile);
+      note('finished');
       app.exit(0);
     }, 1500));
-    setTimeout(() => app.exit(1), 300000);
+    setTimeout(() => { note('hard timeout - killed mid-run'); app.exit(1); }, 600000);
   }
   if (process.env.STRANDLINE_SMOKE) {
     const wc = win.webContents;
